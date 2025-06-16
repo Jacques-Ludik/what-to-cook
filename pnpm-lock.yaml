@@ -11,6 +11,9 @@ importers:
       '@auth/prisma-adapter':
         specifier: ^2.7.2
         version: 2.9.1(@prisma/client@6.9.0(prisma@6.9.0(typescript@5.8.3))(typescript@5.8.3))
+      '@next/eslint-plugin-next':
+        specifier: ^15.3.3
+        version: 15.3.3
       '@prisma/client':
         specifier: ^6.5.0
         version: 6.9.0(prisma@6.9.0(typescript@5.8.3))(typescript@5.8.3)
@@ -70,7 +73,7 @@ importers:
         specifier: ^9.23.0
         version: 9.29.0(jiti@2.4.2)
       eslint-config-next:
-        specifier: ^15.2.3
+        specifier: ^15.3.3
         version: 15.3.3(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3)
       postcss:
         specifier: ^8.5.3

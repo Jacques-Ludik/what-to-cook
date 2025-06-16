@@ -1,15 +1,31 @@
-import { FlatCompat } from "@eslint/eslintrc";
+//import { FlatCompat } from "@eslint/eslintrc";
 import tseslint from "typescript-eslint";
 
-const compat = new FlatCompat({
-  baseDirectory: import.meta.dirname,
-});
+// @ts-ignore
+import nextPlugin from "@next/eslint-plugin-next"; // <-- IMPORT THE PLUGIN
+
+// const compat = new FlatCompat({
+//   baseDirectory: import.meta.dirname,
+// });
 
 export default tseslint.config(
   {
     ignores: [".next"],
   },
-  ...compat.extends("next/core-web-vitals"),
+  // ...compat.extends("next/core-web-vitals"),
+    // --- THIS IS THE NEW, CORRECT WAY ---
+  // Apply the Next.js recommended and core-web-vitals configs
+  {
+    ...nextPlugin.configs.recommended,
+    ...nextPlugin.configs["core-web-vitals"],
+    // You might need to specify files if it doesn't apply globally
+    files: ["**/*.ts", "**/*.tsx"],
+    // You can also override rules here if needed
+    // rules: {
+    //   "@next/next/no-html-link-for-pages": "off",
+    // },
+  },
+  // --- END OF NEW WAY ---
   {
     files: ["**/*.ts", "**/*.tsx"],
     extends: [
