@@ -1,16 +1,38 @@
 import { signIn, signOut, useSession } from "next-auth/react";
 import Head from "next/head";
 import Link from "next/link";
-import { useEffect, useRef, useState, type SetStateAction } from "react";
+import { use, useEffect, useRef, useState, type SetStateAction } from "react";
 
 import { api } from "~/utils/api";
+
+// Types
+ type AllergensOptions = {
+    id: number;
+    allergen: string;
+    state: boolean;
+  };
+
+  type Allergens = {
+    id: number;
+    allergen: string;
+  };
+
+  type AllergensSelect = {
+    allSelected: boolean;
+    clear: boolean;
+  };
+
+  type DietType = {
+    id: number;
+    type: string;
+  };
 
 export default function Home() {
   //const hello = api.post.hello.useQuery({ text: "from tRPC" });
 
   // Declare variables
   const [dietType, setDietType] = useState(false);
-  const [dietTypeOption, setDietTypeOption] = useState("None");
+  const [dietTypeOption, setDietTypeOption] = useState<DietType>({ id: 1, type: "None" });
   const dietTypeRef = useRef<HTMLDivElement>(null);
   const btnDietTypeRef = useRef<HTMLButtonElement>(null);
   const [estimatedTime, setEstimatedTime] = useState(false);
@@ -24,16 +46,17 @@ export default function Home() {
 
 
 
-
-
 //------------------ DIET TYPE --------------------
+const dietTypeOptions = [{ id: 1, type: 'None' }, {id:2, type: 'Pescatarian'}, {id:3, type:'Pollotarian'}, {id:4, type:'Vegetarian'}, {id:5, type:'Vegan'}];
 const handleToggleDietType = () => {
     setDietType(!dietType);
   };
-  const handleDietTypeOption = (option: SetStateAction<string>) => {
-    setDietTypeOption(option);
+  const handleDietTypeOption = (option: SetStateAction<string>, id: number) => {
+    const dietType_ =  dietTypeOptions.find((diet) => diet.id === id);
+    if (!dietType_) return;
+    setDietTypeOption(dietType_);
     setDietType(false);
-  };
+  }
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -50,9 +73,11 @@ const handleToggleDietType = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-  const dietTypeOptions = ['None', 'Pescatarian', 'Pollotarian', 'Vegetarian', 'Vegan'];
+  // const dietTypeOptions = ['None', 'Pescatarian', 'Pollotarian', 'Vegetarian', 'Vegan'];
+  
 
   //------------------ ESTIMATED TIME --------------------
+const estimatedTimeOptions = ['15 minutes', '30 minutes', '45 minutes', '60 minutes', '75 minutes', '90 minutes',  '120 minutes'];
 const handleToggleEstimatedTime = () => {
     setEstimatedTime(!estimatedTime);
   };
@@ -76,15 +101,10 @@ const handleToggleEstimatedTime = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-  const estimatedTimeOptions = ['15 minutes', '30 minutes', '45 minutes', '60 minutes', '75 minutes', '90 minutes',  '120 minutes'];
 
   //------------------ Allergens --------------------
 const handleToggleAllergens = () => {
     setAllergens(!allergens);
-  };
-  const handleAllergensOption = (option: SetStateAction<string>) => {
-    setAllergensOption(option);
-    setAllergens(false);
   };
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -102,13 +122,54 @@ const handleToggleAllergens = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-  const allergensOptions = ["Milk", "Eggs", "Fish", "Crustacean shellfish", "Tree nuts", "Peanuts", "Wheat", "Soybeans", "Sesame", "Mustard", "Celery", "Molluscs", "Lupin", "Sulfer dioxide"];
+  const [allergensListOptions, setAllergensListOptions] = useState<AllergensOptions[]>([]);
+  const [allergensSelection, setAllergensSelection] = useState<AllergensSelect>();
+  const [allergensList, setAllergensList] = useState<Allergens[]>([]);
 
-
-
-
-
-
+  const handleAllergens = (id: number, option: SetStateAction<string>, state: boolean, selectionAllergens: string) => {
+    if (selectionAllergens === "allSelected") {
+      setAllergensOption("Select All");
+      setAllergensSelection({ allSelected: state, clear: false });
+      const allergens_ = allergensListOptions.map((allergen) => ({
+        id: allergen.id,
+        allergen: allergen.allergen,
+      }));
+      setAllergensList(allergens_.sort((a, b) => a.id - b.id));
+      setAllergensListOptions(allergensListOptions.map((allergen) => ({ ...allergen, state: true })));
+    } else if (selectionAllergens === "clear") {
+      setAllergensOption("Clear All");
+      setAllergensSelection({ allSelected: false, clear: state });
+      setAllergensList([]);
+      setAllergensListOptions(allergensListOptions.map((allergen) => ({ ...allergen, state: false })));
+    } else if (selectionAllergens === "normal") {
+      setAllergensOption(option);
+      setAllergensSelection({ allSelected: false, clear: false });
+      if (state) {
+        const allergen_: Allergens = {
+          id: id,
+          allergen: String(option),
+        };
+        const allergensIDList = allergensList.map((allergen) => allergen.id);
+        if (!allergensIDList.includes(id)) {
+          setAllergensList([...allergensList, allergen_]);
+        }
+        setAllergensListOptions(allergensListOptions.map((allergen) => (allergen.id === id ? { ...allergen, state: true } : allergen)));
+      } else {
+        const updatedAllergensList = allergensList.filter((allergen) => allergen.id !== id);
+        setAllergensList(updatedAllergensList.sort((a, b) => a.id - b.id));
+        setAllergensListOptions(allergensListOptions.map((allergen) => (allergen.id === id ? { ...allergen, state: false } : allergen)));
+      }
+    }
+  }
+  useEffect(() => {
+    const allergensOptions = [ { id: 1, name: "Milk"} , { id: 2, name: "Eggs"}, { id: 3, name: "Fish"}, { id: 4, name: "Crustaceans"}, { id: 5, name: "Tree Nuts"}, { id: 6, name: "Peanuts"}, { id: 7, name: "Wheat"}, { id: 8, name: "Soybeans"}, { id: 9, name: "Sesame"}, { id: 10, name: "Mustard"}, { id: 11, name: "Celery"}, { id: 12, name: "Molluscs"}, { id: 13, name: "Lupin"}, { id: 14, name: "Sulfur dioxide"}];
+    const initialAllergensListOptions = allergensOptions.map((allergen, index) => ({
+      id: index + 1,
+      allergen: allergen.name,
+      state: false,
+    }));
+    setAllergensListOptions(initialAllergensListOptions);
+  }, []);
 
 
   return (
@@ -118,7 +179,7 @@ const handleToggleAllergens = () => {
         <meta name="description" content="Select ingredients you have available get delicious recipe ideas" />
         <link rel="icon" href="/whattocook-logo2.png" />
       </Head>
-      <main className="flex min-h-screen flex-col items-center bg-gradient-to-b from-emerald-300 to-emerald-900">
+      <main className="flex min-h-screen flex-col items-center bg-gradient-to-b from-emerald-500 to-emerald-900">
           <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-[3rem]">
             What to <span className="text-amber-600">Cook</span>
           </h1>
@@ -127,63 +188,61 @@ const handleToggleAllergens = () => {
             placeholder="Search for ingredients/recipes..."
             className="mt-2 w-full max-w-md rounded-lg border border-gray-900 bg-white p-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-600"/>  
           <div className="mt-4 flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-[0.3rem] border-2 border-emerald-800 p-4 rounded-2xl w-full max-w-[47%]">
             <p className="text-lg text-black font-bold">
               Ingredients
                   </p>
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Chicken</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Rice</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" py-1 text-white">Broccoli</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Garlic</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Olive Oil</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Salt</span></div>
-            </div>  
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Chicken</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Rice</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" py-1 text-white">Broccoli</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Garlic</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Olive Oil</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Salt</span></div>
+                  <div className="flex flex-wrap items-center justify-center gap-4">
+              <div className="flex gap-1"><input type="checkbox" id="ingredient1" className=" accent-amber-600"/><label htmlFor="ingredient1" className=" text-white">Chicken</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient2" className=" accent-amber-600"/><label htmlFor="ingredient2" className=" text-white">Rice</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient3" className=" accent-amber-600"/><label htmlFor="ingredient3" className="  text-white">Broccoli</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient4" className=" accent-amber-600"/><label htmlFor="ingredient4" className=" text-white">Garlic</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient5" className=" accent-amber-600"/><label htmlFor="ingredient5" className=" text-white">Olive Oil</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient6" className=" accent-amber-600"/><label htmlFor="ingredient6" className=" text-white">Salt</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient7" className=" accent-amber-600"/><label htmlFor="ingredient7" className=" text-white">Milk</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient8" className=" accent-amber-600"/><label htmlFor="ingredient8" className="  text-white">Oil</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient9" className=" accent-amber-600"/><label htmlFor="ingredient9" className=" text-white">Eggs</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient10" className=" accent-amber-600"/><label htmlFor="ingredient10" className=" text-white">Flower</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient11" className=" accent-amber-600"/><label htmlFor="ingredient11" className=" text-white">Sugar</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient12" className=" accent-amber-600"/><label htmlFor="ingredient12" className=" text-white">Peanut Butter</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient13" className=" accent-amber-600"/><label htmlFor="ingredient13" className=" text-white">Cayenne Pepper</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient14" className=" accent-amber-600"/><label htmlFor="ingredient14" className=" text-white">Coriannder</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient15" className=" accent-amber-600"/><label htmlFor="ingredient15" className=" text-white">Raspberry Jam</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient16" className=" accent-amber-600"/><label htmlFor="ingredient16" className=" text-white">Double Cream</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient17" className=" accent-amber-600"/><label htmlFor="ingredient17" className=" text-white">Cinnamon</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient18" className=" accent-amber-600"/><label htmlFor="ingredient18" className=" text-white">Bread</label></div>
             </div> 
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Chicken</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Rice</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" py-1 text-white">Broccoli</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Garlic</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Olive Oil</span></div>
-              <div className="flex gap-1"><input type="checkbox"/><span className=" px-3 py-1 text-white">Salt</span></div>
-            </div> 
+</div>
 
+<div className="flex flex-col items-center gap-[0.3rem] border-2 border-emerald-800 p-4 rounded-2xl w-full max-w-[47%]">
             <p className="text-lg text-black font-bold">
               Preferences
                   </p>
                   <div className="flex flex-wrap items-start justify-center gap-5">
-
                 <div className="flex items-start">
                     <div className="mr-3 flex items-center py-2">
                       <label  htmlFor="dietType" className="text-white font-bold">
                         Diet Type
                       </label>
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col relative">
                       <button
                         ref={btnDietTypeRef}
                         className=" inline-flex items-center rounded-lg bg-amber-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-orange-500 focus:outline-none focus:ring-4 focus:ring-blue-300"
                         type="button"
                         onClick={handleToggleDietType}
                       >
-                        {dietTypeOption + " "}
+                        {dietTypeOption.type + " "}
                         <svg className="ms-3 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
                           <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4" />
                         </svg>
                       </button>
                       {dietType && (
-                        <div ref={dietTypeRef} className="z-10 w-44 divide-y divide-gray-100 rounded-lg bg-white shadow">
+                        <div ref={dietTypeRef} className="absolute top-11 z-10 w-32 divide-y divide-gray-100 rounded-lg bg-white shadow">
                           <ul className="py-2 text-sm text-gray-700" aria-labelledby="dropdownHoverButton">
                             {dietTypeOptions.map((option) => (
-                              <li key={option} onClick={() => handleDietTypeOption(option)}>
-                                <button className="block px-4 py-2 hover:bg-gray-100">{option}</button>
+                              <li key={option.id} onClick={() => handleDietTypeOption(option.type, option.id)}>
+                                <button className="block px-4 py-2 hover:bg-gray-100">{option.type}</button>
                               </li>
                             ))}
                           </ul>
@@ -198,7 +257,7 @@ const handleToggleAllergens = () => {
                         Estimated Time
                       </label>
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col relative">
                       <button
                         ref={btnEstimatedTimeRef}
                         className=" inline-flex items-center rounded-lg bg-amber-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-orange-500 focus:outline-none focus:ring-4 focus:ring-blue-300"
@@ -211,7 +270,7 @@ const handleToggleAllergens = () => {
                         </svg>
                       </button>
                       {estimatedTime && (
-                        <div ref={estimatedTimeRef} className="z-10 w-44 divide-y divide-gray-100 rounded-lg bg-white shadow">
+                        <div ref={estimatedTimeRef} className="absolute top-11 z-10 w-36 divide-y divide-gray-100 rounded-lg bg-white shadow">
                           <ul className="py-2 text-sm text-gray-700" aria-labelledby="dropdownHoverButton">
                             {estimatedTimeOptions.map((option) => (
                               <li key={option} onClick={() => handleEstimatedTimeOption(option)}>
@@ -230,7 +289,7 @@ const handleToggleAllergens = () => {
                         Allergens
                       </label>
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col relative">
                       <button
                         ref={btnAllergensRef}
                         className=" inline-flex items-center rounded-lg bg-amber-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-orange-500 focus:outline-none focus:ring-4 focus:ring-blue-300"
@@ -243,11 +302,51 @@ const handleToggleAllergens = () => {
                         </svg>
                       </button>
                       {allergens && (
-                        <div ref={allergensRef} className="z-10 w-44 divide-y divide-gray-100 rounded-lg bg-white shadow">
-                          <ul className="py-2 text-sm text-gray-700" aria-labelledby="dropdownHoverButton">
-                            {allergensOptions.map((option) => (
-                              <li key={option} onClick={() => handleAllergensOption(option)}>
-                                <button className="block px-4 py-2 hover:bg-gray-100">{option}</button>
+                        <div ref={allergensRef} className="absolute top-11 z-10 w-36 divide-y divide-gray-100 rounded-lg bg-white shadow">
+
+                        <ul className="py-2 text-sm text-gray-700" aria-labelledby="dropdownHoverButton">
+                            <li key={1}>
+                              <div className="flex items-center px-4">
+                                <input
+                                  id="1"
+                                  type="checkbox"
+                                  checked={allergensSelection?.allSelected}
+                                  onChange={(e) => handleAllergens(0, "", e.target.checked, "allSelected")}
+                                  className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-amber-600 focus:ring-2"
+                                />
+                                <label htmlFor="1" className="ms-2 text-sm font-bold text-gray-900">
+                                  Select All
+                                </label>
+                              </div>
+                            </li>
+                            <li key={2}>
+                              <div className="flex items-center px-4">
+                                <input
+                                  id="2"
+                                  type="checkbox"
+                                  checked={allergensSelection?.clear}
+                                  onChange={(e) => handleAllergens(0, "", e.target.checked, "clear")}
+                                  className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-amber-600 focus:ring-2"
+                                />
+                                <label htmlFor="2" className="ms-2 text-sm font-bold text-gray-900">
+                                  Clear All
+                                </label>
+                              </div>
+                            </li>
+                            {allergensListOptions?.map((option) => (
+                              <li key={option.allergen}>
+                                <div className="flex items-center px-4">
+                                  <input
+                                    id={String(option.allergen)}
+                                    type="checkbox"
+                                    checked={option.state}
+                                    onChange={(e) => handleAllergens(option.id, option.allergen, e.target.checked, "normal")}
+                                    className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-amber-600 focus:ring-2"
+                                  />
+                                  <label htmlFor={String(option.allergen)} className="ms-2 text-sm font-medium text-gray-900">
+                                    {option.allergen}
+                                  </label>
+                                </div>
                               </li>
                             ))}
                           </ul>
@@ -255,11 +354,11 @@ const handleToggleAllergens = () => {
                       )}
                     </div>
                   </div>
-
-              {/* <div className="flex gap-1"><input id="allergens" type="checkbox" className=" accent-amber-600"/><label htmlFor="allergens" className=" py-1 text-white">Allergens</label></div> */}
               <div className="flex gap-1"><input id="highProtein" type="checkbox" className=" accent-amber-600"/><label htmlFor="highProtein" className="  py-1 text-white">High Protein</label></div>
               <div className="flex gap-1"><input id="lowCalorie" type="checkbox" className=" accent-amber-600"/><label htmlFor="lowCalorie" className=" py-1 text-white">Low Calorie</label></div>
             </div>  
+           
+            </div>
 
             <button
               className="mt-4 rounded-xl bg-amber-600 px-10 py-3 font-bold text-white text-xl no-underline transition hover:bg-orange-500"
