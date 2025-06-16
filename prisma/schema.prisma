@@ -63,6 +63,21 @@ model User {
     accounts      Account[]
     sessions      Session[]
     posts         Post[]
+    dietType      DietType? @relation(fields: [dietTypeId], references: [id])
+    dietTypeId    Int?
+
+    favourites    Recipe[]  @relation("UserRecipes")
+    UserRecipes   UserRecipes[]
+
+    ingredients   Ingredient[] @relation("UserIngredients")
+    UserIngredients UserIngredients[]
+
+    estimatedTime String?
+    highProtein   Boolean? @default(false)
+    lowCalorie    Boolean? @default(false)
+    createdAt    DateTime  @default(now())
+    updatedAt    DateTime  @updatedAt
+    UserAllergens UserAllergens[]
 }
 
 model VerificationToken {
@@ -72,3 +87,128 @@ model VerificationToken {
 
     @@unique([identifier, token])
 }
+
+model Ingredient {
+    id        Int      @id @default(autoincrement())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    recipes   Recipe[] @relation("RecipeIngredient")
+    RecipeIngredient RecipeIngredients[]
+
+    User User[] @relation("UserIngredients")
+    UserIngredients UserIngredients[]
+}
+
+model Recipe {
+    id        Int      @id @default(autoincrement())
+    title      String
+    imageUrl  String?
+    link      String?
+    category  String?
+    area      String?
+    dietType  DietType? @relation(fields: [dietTypeId], references: [id])
+    dietTypeId Int?
+
+    ingredients Ingredient[] @relation("RecipeIngredient")
+    RecipeIngredient RecipeIngredients[]
+
+    instructions String?
+    estimatedTime String?
+    highProtein Boolean? @default(false)
+    lowCalorie  Boolean? @default(false)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    User User[] @relation("UserRecipes")
+
+    RecipeDietType RecipeDietType[]
+
+    UserRecipes UserRecipes[]
+
+    RecipeAllergens RecipeAllergens[]
+}
+
+model RecipeIngredients {
+    id          Int       @id @default(autoincrement())
+    recipeId    Int
+    ingredientId Int
+    measure     String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    recipe      Recipe    @relation(fields: [recipeId], references: [id])
+    ingredient  Ingredient @relation(fields: [ingredientId], references: [id])
+
+    @@unique([recipeId, ingredientId])
+}
+
+model DietType {
+    id        Int      @id @default(autoincrement())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    Recipe Recipe[]
+    User User[]
+    RecipeDietType RecipeDietType[]
+}
+
+model RecipeDietType {
+    id          Int       @id @default(autoincrement())
+    recipeId    Int
+    dietTypeId  Int
+    recipe      Recipe    @relation(fields: [recipeId], references: [id])
+    dietType    DietType  @relation(fields: [dietTypeId], references: [id])
+    @@unique([recipeId, dietTypeId])
+}
+
+
+model UserRecipes {
+    userId    String
+    recipeId  Int
+    user      User     @relation(fields: [userId], references: [id])
+    recipe    Recipe   @relation(fields: [recipeId], references: [id])
+
+    @@id([userId, recipeId])
+}
+model UserIngredients {
+    userId      String
+    ingredientId Int
+    counter        Int
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    user        User       @relation(fields: [userId], references: [id])
+    ingredient  Ingredient @relation(fields: [ingredientId], references: [id])
+
+    @@id([userId, ingredientId])
+}
+
+model Allergens {
+    id        Int      @id @default(autoincrement())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    UserAllergens UserAllergens[]
+    RecipeAllergens RecipeAllergens[]
+}
+
+model UserAllergens {
+    userId      String
+    allergenId  Int
+    user        User       @relation(fields: [userId], references: [id])
+    allergen    Allergens  @relation(fields: [allergenId], references: [id])
+
+    @@id([userId, allergenId])
+}
+
+model RecipeAllergens {
+    id          Int       @id @default(autoincrement())
+    recipeId    Int
+    allergenId  Int
+    recipe      Recipe    @relation(fields: [recipeId], references: [id])
+    allergen    Allergens @relation(fields: [allergenId], references: [id])
+
+    @@unique([recipeId, allergenId])
+}
+
