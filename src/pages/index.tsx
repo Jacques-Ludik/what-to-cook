@@ -29,6 +29,11 @@ import { api } from "~/utils/api";
 
 export default function Home() {
   //const hello = api.post.hello.useQuery({ text: "from tRPC" });
+  //routes
+  const createIngredients = api.recipe.createIngredients.useMutation();
+  const createDietTypes = api.recipe.createDietTypes.useMutation();
+  const createAllergens = api.recipe.createAllergens.useMutation();
+  const createRecipes = api.recipe.createRecipes.useMutation();
 
   // Declare variables
   const [dietType, setDietType] = useState(false);
@@ -162,7 +167,8 @@ const handleToggleAllergens = () => {
     }
   }
   useEffect(() => {
-    const allergensOptions = [ { id: 1, name: "Milk"} , { id: 2, name: "Eggs"}, { id: 3, name: "Fish"}, { id: 4, name: "Crustaceans"}, { id: 5, name: "Tree Nuts"}, { id: 6, name: "Peanuts"}, { id: 7, name: "Wheat"}, { id: 8, name: "Soybeans"}, { id: 9, name: "Sesame"}, { id: 10, name: "Mustard"}, { id: 11, name: "Celery"}, { id: 12, name: "Molluscs"}, { id: 13, name: "Lupin"}, { id: 14, name: "Sulfur dioxide"}];
+    const allergensOptions = [{ id: 1, name: 'Wheat'}, {id:2, name:'Milk'}, { id: 3, name: 'Eggs'}, { id: 4, name: 'Sulfur Dioxide'}, { id: 5, name: 'Celery'}, { id: 6, name: 'Soybeans'}, { id: 7, name: 'Fish'}, { id: 8, name: 'Tree Nuts'}, { id: 9, name: 'Mustard'}, { id: 10, name: 'Sesame'}, { id: 11, name: 'Crustacean Shellfish'}, { id: 12, name: 'Peanuts'}, { id: 13, name: 'Molluscs'}, { id: 14, name: "Lupin"}];
+    // const allergensOptions = [ { id: 1, name: "Milk"} , { id: 2, name: "Eggs"}, { id: 3, name: "Fish"}, { id: 4, name: "Crustacean Shellfish"}, { id: 5, name: "Tree Nuts"}, { id: 6, name: "Peanuts"}, { id: 7, name: "Wheat"}, { id: 8, name: "Soybeans"}, { id: 9, name: "Sesame"}, { id: 10, name: "Mustard"}, { id: 11, name: "Celery"}, { id: 12, name: "Molluscs"}, { id: 13, name: "Lupin"}, { id: 14, name: "Sulfur dioxide"}];
     const initialAllergensListOptions = allergensOptions.map((allergen, index) => ({
       id: index + 1,
       allergen: allergen.name,
@@ -172,11 +178,52 @@ const handleToggleAllergens = () => {
   }, []);
 
 
+  //------------------ Create Ingredients --------------------
+  const ingredients = ['Butter', 'Garlic', 'Olive Oil', 'Onions', 'Salt', 'Eggs', 'Water', 'Sugar', 'Milk', 'Potatoes', 'Flour', 'Pepper', 'Carrots', 'Caster Sugar', 'Parsley', 'Vegetable Oil', 'Soy Sauce', 'Garlic Clove', 'Bay Leaves', 'Coriander', 'Lemon', 'Ginger', 'Tomato Puree', 'Paprika', 'Spring Onions', 'Thyme', 'Chicken Stock', 'Cinnamon', 'Cumin', 'Double Cream', 'Tomatoes', 'Beef', 'Baking Powder', 'Mushrooms', 'Red Pepper', 'Lime', 'Oil', 'Bread', 'Celery', 'Bacon', 'Lemon Juice', 'Icing Sugar', 'Black Pepper', 'Vanilla Extract', 'Egg Yolks', 'Vegetable Stock', 'Beef Stock', 'Allspice', 'Chicken', 'Red Chilli', 'Parmesan', 'Nutmeg', 'Self-raising Flour', 'Red Onions', 'Pork', 'Rice', 'White Wine', 'Sour Cream', 'Breadcrumbs', 'Cabbage', 'Brown Sugar', 'Rosemary', 'Sunflower Oil', 'Leek', 'Mint', 'Sesame Seed Oil', 'Worcestershire Sauce', 'Coconut Milk', 'Corn Flour', 'Cardamom', 'Minced Beef', 'Basil', 'Honey', 'Orange', 'Chicken Breasts', 'Muscovado Sugar', 'Greek Yogurt', 'Puff Pastry', 'Red Wine', 'Cornstarch', 'Cucumber', 'White Wine Vinegar', 'Dill', 'Prawns', 'Spinach', 'Shallots', 'Cayenne Pepper', 'Fennel', 'Green Chilli', 'Mustard', 'Cloves', 'Sausages', 'Yeast', 'Hotsauce', 'Garlic Powder', 'Garam Masala', 'Harissa Spice', 'Sea Salt', 'Cream Cheese', 'Red Wine Vinegar', 'Dry White Wine', 'Courgettes/Zucchinis', 'Vinegar', 'Peanuts', 'Lamb', 'Saffron', 'Peanut Butter', 'Turmeric', 'Cinnamon Stick', 'Creme Fraiche', 'Black Treacle', 'Almonds', 'Cherry Tomatoes', 'Salmon', 'Black Olives', 'Mayonnaise', 'Green Pepper', 'Cannellini Beans', 'Cumin Seeds', 'Heavy Cream', 'Chickpeas', 'Vanilla', 'Basmati Rice', 'Egg Plants/Aubergine', 'Peas', 'Digestive Biscuits', 'Unsalted Butter', 'Chicken Thighs', 'Tamarind Paste', 'English Mustard', 'Beef Brisket', 'Broccoli', 'Rapeseed Oil', 'Raspberries', 'Starch', 'Oyster Sauce', 'Egg White', 'Chilli Powder', 'Avocado', 'Brandy', 'Basil Leaves', 'Dark Chocolate', 'Shortcrust Pastry', 'Kale', 'Mozzarella', 'Strawberries', 'Yellow Pepper', 'Chives', 'Dried Oregano', 'Salted Butter', 'Ground Almonds', 'Blackberries', 'Beef Fillet', 'Oregano', 'Tomato Ketchup', 'Suet', 'Green Beans', 'Minced Garlic', 'Bicarbonate Of Soda', 'Golden Syrup', 'Red Pepper Flakes/Red Chilli Flakes', 'Macaroni', 'Lettuce', 'Ham', 'Custard', 'Feta', 'Gruyère', 'Fish Stock', 'Kidney Beans', 'Curry Powder', 'Sage', 'Chilli', 'Brown Lentils', 'Lamb Mince', 'Almond Extract', 'Flaked Almonds', 'Braeburn Apples', 'Demerara Sugar', 'Chorizo', 'Plum Tomatoes', 'Banana', 'Pecan Nuts', 'Swede', 'Celeriac', 'Noodles', 'Ricotta', 'Maple Syrup', 'Ground Beef', 'Cheese', 'Onion Salt', 'Marjoram', 'Star Anise', 'Coconut Cream', 'White Vinegar', 'Cheddar Cheese', 'Smoked Paprika', 'Sake', 'Chicken Legs', 'King Prawns', 'Passata', 'Whole Milk', 'Light Brown Soft Sugar', 'Cocoa', 'Walnuts', 'Dried Fruit', 'Single Cream', 'Raisins', 'Lentils', 'Mascarpone', 'Currants', 'Small Potatoes', 'Celery Salt', 'Cilantro', 'Pita Bread', 'Rice Vinegar', 'Mussels', 'Broad Beans', 'Tofu', 'Sushi Rice', 'Mirin', 'Smoked Haddock', 'Fish Sauce', 'Lasagne Sheets', 'Tuna', 'Anchovy Fillet', 'Spaghetti', 'Rocket', 'Baguette', 'Bramley Apples', 'Ice Cream', 'Raspberry Jam', 'Red Chilli Powder', 'Coriander Leaves/Cilantro', 'Balsamic Vinegar', 'Tomato Sauce', 'Butter Beans', 'Yogurt', 'Apricot', 'Goose Fat', 'Chestnut Mushroom', 'Bean Sprouts', 'Barbeque Sauce', 'Sesame Seed Burger Buns', 'Sauerkraut', 'Filo Pastry', 'Beetroot', 'Buckwheat', 'Corn Tortillas', 'Granulated Sugar', 'Christmas Pudding', 'Ginger Paste', 'Cream', 'Squash', 'White Fish', 'Shredded Mexican Cheese', 'Jalapeno', 'Linguine Pasta', 'Clams', 'Mustard Powder', 'Sweetcorn', 'Couscous', 'Cacao', 'Dark Brown Soft Sugar', 'Milk Chocolate', 'Ginger Cordial', 'Cashew Nuts', 'Candied Peel', 'Grand Marnier', 'Glace Cherry', 'Italian Fennel Sausages', 'Shiitake Mushrooms', 'Quinoa', 'Pickle Juice', 'Pork Chops', 'Minced Pork', 'Lamb Shoulder', 'Garlic Sauce', 'Sesame Seed', 'Ghee', 'Apricot Jam', 'Duck Legs', 'Mixed Peel', 'Black Pudding', 'Scotch Bonnet', 'Ground Pork', 'Floury Potatoes', 'Jerusalem Artichokes', 'Fettuccine', 'Lard', 'Haddock', 'Sardines', 'Cod', 'Kosher Salt', 'Chocolate Chips', 'Condensed Milk', 'White Chocolate Chips', 'Miniature Marshmallows', 'Water Chestnut', 'Pumpkin', 'Canola Oil', 'Fennel Bulb', 'Lamb Leg', 'Butternut Squash', 'Mozzarella Balls', 'Lamb Kidney', 'Scallions', 'Chinese Broccoli', 'Lemon Zest', 'Rice Stick Noodles', 'Fennel Seeds', 'Blueberries', 'Ground Ginger', 'Tiger Prawns', 'Pecorino', 'Apple Cider Vinegar', 'Pine Nuts', 'Frozen Peas', 'Ground Cumin', 'Pretzels', 'Cooking Wine', 'Rice Wine', 'Sultanas', 'Parma Ham', 'Ancho Chillies', 'Dark Brown Sugar', 'Borlotti Beans', 'Stilton Cheese', 'Stout', 'Oysters', 'Hazelnuts', 'Pink Food Colouring', 'Marzipan', 'Beef Shin', 'Bouquet Garni', 'Brie', 'Prosciutto', 'Dark Rum', 'Iceberg Lettuce', 'Dill Pickles', 'Kielbasa', 'Caraway Seed', 'Beef Stock Concentrate', 'Enchilada Sauce', 'Shredded Monterey Jack Cheese', 'Rolled Oats', 'Coriander Seeds', 'Turmeric Powder', 'Fenugreek', 'Farfalle/Bowtie Pasta', 'Fajita Seasoning', 'Cajun', 'Flour Tortilla', 'Little Gem Lettuce', 'Salsa', 'Vinaigrette Dressing', 'Refried Beans', 'Hard Taco Shells', 'Grape Tomatoes', 'Green Salsa', 'Potato Starch', 'Sugar Snap Peas', 'Fromage Frais', 'Dried Apricots', 'Dark Chocolate Chips', 'Tinned Tomatoes', 'White Flour', 'Red Wine Jelly', 'Sun-dried Tomatoes', 'Mars Bar', 'Rice Krispies', 'Orange Blossom Water', 'Sherry', 'Mixed Spice', 'Rose Water', 'Cider', 'Toor Dal', 'Mustard Seeds', 'Meringue Nests', 'Red Snapper', 'Malt Vinegar', 'Semi-skimmed Milk', 'White Fish Fillets', 'French Lentils', 'Clotted Cream', 'Baked Beans', 'Tarragon Leaves', 'Raw King Prawns', 'Cubed Feta Cheese', 'Monterey Jack Cheese', 'Colby Jack Cheese', 'Duck Sauce', 'Gochujang', 'Wood Ear Mushrooms', 'Fruit Mix', 'Whole Wheat', 'Lamb Loin Chops', 'Turnips', 'Charlotte Potatoes', 'Fries', 'Doner Meat', 'Gouda Cheese', 'Ras El Hanout', 'Shortening', 'Vine Leaves', 'Khus Khus', 'Ginger Garlic Paste', 'Full Fat Yogurt', 'Biryani Masala', 'Madras Paste', 'Thai Red Curry Paste', 'Rice Noodles', 'Bulgur Wheat', 'Bun', 'Prunes', 'Baby Plum Tomatoes', 'Extra Virgin Olive Oil', 'Green Olives', 'Massaman Curry Paste', 'Jasmine Rice', 'Chestnuts', 'Wild Mushrooms', 'Truffle Oil', 'Paneer', 'Naan Bread', 'Doubanjiang', 'Fermented Black Beans', 'Sichuan Pepper', 'Goat Meat', 'Mincemeat', 'Mulukhiyah', 'Desiccated Coconut', 'Custard Powder', 'Veal', 'Orange Zest', 'Oxtail', 'Dark Soy Sauce', 'Peanut Oil', 'Beef Gravy', 'Cheese Curds', 'Pilchards', 'Haricot Beans', 'Peanut Cookies', 'Gelatine Leafs', 'Peanut Brittle', 'Peaches', 'Oatmeal', 'Pears', 'Creamed Corn', 'Ciabatta', 'Squid', 'Pitted Black Olives', 'Rigatoni', 'Mackerel', 'Tamarind Ball', 'Canned Tomatoes', 'Wholegrain Bread', 'Baby Aubergine', 'Paella Rice', 'Jam', 'Lean Minced Beef', 'Penne Rigate', 'Italian Seasoning', 'Parmigiano-reggiano', 'Medjool Dates', 'Asparagus', 'Caramel', 'Caramel Sauce', 'Toffee Popcorn', 'Vermicelli Pasta', 'Monkfish', 'Baby Squid', 'Vine Tomatoes', 'Redcurrants', 'Dijon Mustard', 'Tabasco Sauce', 'Salt Cod', 'Ackee', 'English Muffins', 'Smoked Salmon', 'Apples', 'Rhubarb', 'Herring', 'Black Beans', 'Stir-fry Vegetables', 'Brown Rice', 'Thai Green Curry Paste', 'Thai Fish Sauce', 'Horseradish', 'Turkey Mince', 'Capers', 'Tahini', 'Goats Cheese', 'Green Red Lentils', 'Vegan Butter', 'Soya Milk', 'Coco Sugar', 'Flax Eggs', 'Almond Milk', 'Rice Vermicelli', 'Egg Rolls', 'Paccheri Pasta', 'Roasted Vegetables', 'Mixed Grain', 'Wonton Skin', 'Udon Noodles'];
+  // const handleCreateIngredients = () => {
+  //   createIngredients.mutate({ name: ingredients });
+  //   console.log("Ingredients created successfully");
+  // };
+  const handleCreateIngredients = () => {
+
+  // Set a manageable size for each batch
+  const batchSize = 50;
+
+  console.log(`Starting to create ${ingredients.length} ingredients in batches of ${batchSize}...`);
+
+  // Loop through the ingredients array, taking a "slice" of `batchSize` each time
+  for (let i = 0; i < ingredients.length; i += batchSize) {
+    const batch = ingredients.slice(i, i + batchSize);
+
+    // Use a setTimeout to add a small delay between requests. This is good practice
+    // to avoid overwhelming the server with simultaneous requests.
+    setTimeout(() => {
+      console.log(`Sending batch starting with: ${batch[0]}`);
+      
+      // // Call mutate for each smaller batch
+      // createIngredients.mutate(
+      //   { name: batch },
+      //   {
+      //     onSuccess: (data) => {
+      //       // This is the correct way to know a batch succeeded
+      //       console.log(`Successfully created batch of ${data.count} ingredients!`);
+      //     },
+      //     onError: (error) => {
+      //       // This will catch and log tRPC errors properly
+      //       console.error(`Failed to create batch starting with: ${batch[0]}`, error);
+      //     },
+      //   }
+      // );
+    }, i * 20); // 0ms, 1000ms, 2000ms delay etc. (adjust delay as needed)
+  }
+};
+
+
   return (
     <>
       <Head>
         <title>What to Cook</title>
-        <meta name="description" content="Select ingredients you have available get delicious recipe ideas" />
+        <meta name="description" content="Select ingredients you have available to get mouth watering recipes or just browse through delicious recipe ideas" />
         <link rel="icon" href="/whattocook-logo2.png" />
       </Head>
       <main className="flex min-h-screen flex-col items-center bg-gradient-to-b from-emerald-500 to-emerald-900">
@@ -302,11 +349,11 @@ const handleToggleAllergens = () => {
                         </svg>
                       </button>
                       {allergens && (
-                        <div ref={allergensRef} className="absolute top-11 z-10 w-36 divide-y divide-gray-100 rounded-lg bg-white shadow">
+                        <div ref={allergensRef} className="absolute top-11 z-10 w-44 divide-y divide-gray-100 rounded-lg bg-white shadow">
 
                         <ul className="py-2 text-sm text-gray-700" aria-labelledby="dropdownHoverButton">
                             <li key={1}>
-                              <div className="flex items-center px-4">
+                              <div className="flex items-center px-2">
                                 <input
                                   id="1"
                                   type="checkbox"
@@ -320,7 +367,7 @@ const handleToggleAllergens = () => {
                               </div>
                             </li>
                             <li key={2}>
-                              <div className="flex items-center px-4">
+                              <div className="flex items-center px-2">
                                 <input
                                   id="2"
                                   type="checkbox"
@@ -335,7 +382,7 @@ const handleToggleAllergens = () => {
                             </li>
                             {allergensListOptions?.map((option) => (
                               <li key={option.allergen}>
-                                <div className="flex items-center px-4">
+                                <div className="flex items-center px-2">
                                   <input
                                     id={String(option.allergen)}
                                     type="checkbox"
@@ -364,6 +411,7 @@ const handleToggleAllergens = () => {
               className="mt-4 rounded-xl bg-amber-600 px-10 py-3 font-bold text-white text-xl no-underline transition hover:bg-orange-500"
               onClick={() => {
                 // Handle search logic here
+                handleCreateIngredients();
                 console.log("Searching with options:", {
                   dietType: dietTypeOption,
                   estimatedTime: estimatedTimeOption,
