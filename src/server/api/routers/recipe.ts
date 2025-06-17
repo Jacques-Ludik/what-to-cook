@@ -58,15 +58,13 @@ export const recipeRouter = createTRPCRouter({
                 link: input.link,
                 category: input.category,
                 area: input.area,
+                // If you want to create RecipeIngredient relations with measures, do it like this:
                 ingredients: {
-                    connect: input.ingredients.map((id) => ({ id })),
+                    create: input.ingredients.map((ingredientId, index) => ({
+                        ingredientId,
+                        measure: input.measures[index],
+                    })),
                 },
-                // RecipeIngredient: {
-                //     create: input.ingredients.map((ingredientId, index) => ({
-                //         ingredientId,
-                //         measure: input.measures[index],
-                //     })),
-                // },
                 dietType: {
                     connect: { id: input.dietType },
                 },
