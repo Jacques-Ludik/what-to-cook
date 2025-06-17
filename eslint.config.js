@@ -28,11 +28,14 @@ export default tseslint.config(
   // --- END OF NEW WAY ---
   {
     files: ["**/*.ts", "**/*.tsx"],
-    extends: [
-      ...tseslint.configs.recommended,
-      ...tseslint.configs.recommendedTypeChecked,
-      ...tseslint.configs.stylisticTypeChecked,
-    ],
+    plugins: {
+      "@next/next": nextPlugin,
+    },
+    // extends: [
+    //   ...tseslint.configs.recommended,
+    //   ...tseslint.configs.recommendedTypeChecked,
+    //   ...tseslint.configs.stylisticTypeChecked,
+    // ],
     rules: {
       "@typescript-eslint/array-type": "off",
       "@typescript-eslint/consistent-type-definitions": "off",
@@ -116,3 +119,6 @@ export default tseslint.config(
 //     },
 //   },
 // );
+
+
+
