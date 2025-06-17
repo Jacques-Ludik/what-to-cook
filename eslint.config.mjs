@@ -1,7 +1,6 @@
 // eslint.config.mjs
 import t from "typescript-eslint";
 
-// @ts-ignore
 import nextPlugin from "@next/eslint-plugin-next";
 
 export default t.config(
