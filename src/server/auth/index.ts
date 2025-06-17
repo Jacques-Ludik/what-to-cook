@@ -1,5 +1,6 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { type DefaultSession, getServerSession, type NextAuthOptions } from "next-auth";
+import type { GetServerSidePropsContext, NextApiRequest, NextApiResponse } from "next";
 //import DiscordProvider from "next-auth/providers/discord";
 import GoogleProvider from "next-auth/providers/google";
 
@@ -44,4 +45,19 @@ export const authOptions = {
  * This is a VERY IMPORTANT piece for the T3 Stack.
  * @see https://next-auth.js.org/configuration/nextjs
  */
-export const getServerAuthSession = () => getServerSession(authOptions);
+/**
+ * Wrapper for `getServerSession` so that you don't need to import the `authOptions` in every file.
+ * This version works for both App Router (server components) and Pages Router (API routes).
+ *
+ * @see https://next-auth.js.org/configuration/nextjs
+ */
+export const getServerAuthSession = (ctx?: {
+  req: NextApiRequest | GetServerSidePropsContext["req"];
+  res: NextApiResponse | GetServerSidePropsContext["res"];
+}) => {
+  // If ctx is provided (from Pages Router), use it. Otherwise, it's App Router.
+  return ctx 
+    ? getServerSession(ctx.req, ctx.res, authOptions)
+    : getServerSession(authOptions);
+};
+//export const getServerAuthSession = () => getServerSession(authOptions);
