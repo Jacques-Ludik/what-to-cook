@@ -1,6 +1,7 @@
 import { signIn, signOut, useSession } from "next-auth/react";
 import Head from "next/head";
 import Link from "next/link";
+import Image from "next/image";
 import { use, useEffect, useRef, useState, type SetStateAction } from "react";
 
 import { api } from "~/utils/api";
@@ -237,56 +238,65 @@ const handleToggleAllergens = () => {
         <meta name="description" content="Select ingredients you have available to get mouth watering recipes or just browse through delicious recipe ideas" />
         <link rel="icon" href="/whattocook-logo2.png" />
       </Head>
-      <main className="flex min-h-screen flex-col items-center bg-gradient-to-b from-emerald-500 to-emerald-900">
-          <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-[3rem]">
-            What to <span className="text-amber-600">Cook</span>
+      <main className="flex min-h-screen flex-col items-center bg-gradient-to-b from-red-200 to-red-200">
+        {/* from-emerald-500 to-emerald-900   text-white     text-amber-600*/}
+          <div className="flex gap-2"><h1 className="text-xl font-extrabold tracking-tight text-black sm:text-[3rem]">
+            What to <span className="text-red-600">Cook</span>
           </h1>
+           {/* <Image
+          src={"/whattocook-logo2.png"}
+          alt="WhatToCook Logo"
+          className="ml-3 aspect-square"
+          width={60}
+          height={60}
+        /> */}
+        </div>
           <input
             type="text"
             placeholder="Search for ingredients/recipes..."
-            className="mt-2 w-full max-w-md rounded-lg border border-gray-900 bg-white p-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-600"/>  
+            className="mt-2 w-full max-w-md rounded-lg border border-gray-900 bg-white p-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-600"/>  
           <div className="mt-4 flex flex-col items-center gap-2">
-            <div className="flex flex-col items-center gap-[0.3rem] border-2 border-emerald-800 p-4 rounded-2xl w-full max-w-[47%]">
+            <div className="flex flex-col items-center gap-[0.3rem] border-2 border-red-900 p-4 rounded-2xl w-full max-w-[47%]">
             <p className="text-lg text-black font-bold">
               Ingredients
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-4">
-              <div className="flex gap-1"><input type="checkbox" id="ingredient1" className=" accent-amber-600"/><label htmlFor="ingredient1" className=" text-white">Chicken</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient2" className=" accent-amber-600"/><label htmlFor="ingredient2" className=" text-white">Rice</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient3" className=" accent-amber-600"/><label htmlFor="ingredient3" className="  text-white">Broccoli</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient4" className=" accent-amber-600"/><label htmlFor="ingredient4" className=" text-white">Garlic</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient5" className=" accent-amber-600"/><label htmlFor="ingredient5" className=" text-white">Olive Oil</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient6" className=" accent-amber-600"/><label htmlFor="ingredient6" className=" text-white">Salt</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient7" className=" accent-amber-600"/><label htmlFor="ingredient7" className=" text-white">Milk</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient8" className=" accent-amber-600"/><label htmlFor="ingredient8" className="  text-white">Oil</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient9" className=" accent-amber-600"/><label htmlFor="ingredient9" className=" text-white">Eggs</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient10" className=" accent-amber-600"/><label htmlFor="ingredient10" className=" text-white">Flower</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient11" className=" accent-amber-600"/><label htmlFor="ingredient11" className=" text-white">Sugar</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient12" className=" accent-amber-600"/><label htmlFor="ingredient12" className=" text-white">Peanut Butter</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient13" className=" accent-amber-600"/><label htmlFor="ingredient13" className=" text-white">Cayenne Pepper</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient14" className=" accent-amber-600"/><label htmlFor="ingredient14" className=" text-white">Coriannder</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient15" className=" accent-amber-600"/><label htmlFor="ingredient15" className=" text-white">Raspberry Jam</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient16" className=" accent-amber-600"/><label htmlFor="ingredient16" className=" text-white">Double Cream</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient17" className=" accent-amber-600"/><label htmlFor="ingredient17" className=" text-white">Cinnamon</label></div>
-              <div className="flex gap-1"><input type="checkbox" id="ingredient18" className=" accent-amber-600"/><label htmlFor="ingredient18" className=" text-white">Bread</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient1" className=" accent-red-600"/><label htmlFor="ingredient1" className=" text-black">Chicken</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient2" className=" accent-red-600"/><label htmlFor="ingredient2" className=" text-black">Rice</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient3" className=" accent-red-600"/><label htmlFor="ingredient3" className="  text-black">Broccoli</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient4" className=" accent-red-600"/><label htmlFor="ingredient4" className=" text-black">Garlic</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient5" className=" accent-red-600"/><label htmlFor="ingredient5" className=" text-black">Olive Oil</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient6" className=" accent-red-600"/><label htmlFor="ingredient6" className=" text-black">Salt</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient7" className=" accent-red-600"/><label htmlFor="ingredient7" className=" text-black">Milk</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient8" className=" accent-red-600"/><label htmlFor="ingredient8" className="  text-black">Oil</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient9" className=" accent-red-600"/><label htmlFor="ingredient9" className=" text-black">Eggs</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient10" className=" accent-red-600"/><label htmlFor="ingredient10" className=" text-black">Flower</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient11" className=" accent-red-600"/><label htmlFor="ingredient11" className=" text-black">Sugar</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient12" className=" accent-red-600"/><label htmlFor="ingredient12" className=" text-black">Peanut Butter</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient13" className=" accent-red-600"/><label htmlFor="ingredient13" className=" text-black">Cayenne Pepper</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient14" className=" accent-red-600"/><label htmlFor="ingredient14" className=" text-black">Coriannder</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient15" className=" accent-red-600"/><label htmlFor="ingredient15" className=" text-black">Raspberry Jam</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient16" className=" accent-red-600"/><label htmlFor="ingredient16" className=" text-black">Double Cream</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient17" className=" accent-red-600"/><label htmlFor="ingredient17" className=" text-black">Cinnamon</label></div>
+              <div className="flex gap-1"><input type="checkbox" id="ingredient18" className=" accent-red-600"/><label htmlFor="ingredient18" className=" text-black">Bread</label></div>
             </div> 
 </div>
 
-<div className="flex flex-col items-center gap-[0.3rem] border-2 border-emerald-800 p-4 rounded-2xl w-full max-w-[47%]">
+<div className="flex flex-col items-center gap-[0.3rem] border-2 border-red-900 p-4 rounded-2xl w-full max-w-[47%]">
             <p className="text-lg text-black font-bold">
               Preferences
                   </p>
                   <div className="flex flex-wrap items-start justify-center gap-5">
                 <div className="flex items-start">
                     <div className="mr-3 flex items-center py-2">
-                      <label  htmlFor="dietType" className="text-white font-bold">
+                      <label  htmlFor="dietType" className="text-black font-bold">
                         Diet Type
                       </label>
                     </div>
                     <div className="flex flex-col relative">
                       <button
                         ref={btnDietTypeRef}
-                        className=" inline-flex items-center rounded-lg bg-amber-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-orange-500 focus:outline-none focus:ring-4 focus:ring-blue-300"
+                        className=" inline-flex items-center rounded-lg bg-red-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-red-500 focus:outline-none focus:ring-4 focus:ring-blue-300"
                         type="button"
                         onClick={handleToggleDietType}
                       >
@@ -311,14 +321,14 @@ const handleToggleAllergens = () => {
 
               <div className="flex items-start">
                     <div className="mr-3 flex items-center py-2">
-                      <label  htmlFor="estimatedTime" className="text-white font-bold">
+                      <label  htmlFor="estimatedTime" className="text-black font-bold">
                         Estimated Time
                       </label>
                     </div>
                     <div className="flex flex-col relative">
                       <button
                         ref={btnEstimatedTimeRef}
-                        className=" inline-flex items-center rounded-lg bg-amber-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-orange-500 focus:outline-none focus:ring-4 focus:ring-blue-300"
+                        className=" inline-flex items-center rounded-lg bg-red-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-red-500 focus:outline-none focus:ring-4 focus:ring-blue-300"
                         type="button"
                         onClick={handleToggleEstimatedTime}
                       >
@@ -343,14 +353,14 @@ const handleToggleAllergens = () => {
 
                       <div className="flex items-start">
                     <div className="mr-3 flex items-center py-2">
-                      <label  htmlFor="allergens" className="text-white font-bold">
+                      <label  htmlFor="allergens" className="text-black font-bold">
                         Allergens
                       </label>
                     </div>
                     <div className="flex flex-col relative">
                       <button
                         ref={btnAllergensRef}
-                        className=" inline-flex items-center rounded-lg bg-amber-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-orange-500 focus:outline-none focus:ring-4 focus:ring-blue-300"
+                        className=" inline-flex items-center rounded-lg bg-red-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-red-500 focus:outline-none focus:ring-4 focus:ring-blue-300"
                         type="button"
                         onClick={handleToggleAllergens}
                       >
@@ -370,7 +380,7 @@ const handleToggleAllergens = () => {
                                   type="checkbox"
                                   checked={allergensSelection?.allSelected}
                                   onChange={(e) => handleAllergens(0, "", e.target.checked, "allSelected")}
-                                  className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-amber-600 focus:ring-2"
+                                  className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-red-600 focus:ring-2"
                                 />
                                 <label htmlFor="1" className="ms-2 text-sm font-bold text-gray-900">
                                   Select All
@@ -384,7 +394,7 @@ const handleToggleAllergens = () => {
                                   type="checkbox"
                                   checked={allergensSelection?.clear}
                                   onChange={(e) => handleAllergens(0, "", e.target.checked, "clear")}
-                                  className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-amber-600 focus:ring-2"
+                                  className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-red-600 focus:ring-2"
                                 />
                                 <label htmlFor="2" className="ms-2 text-sm font-bold text-gray-900">
                                   Clear All
@@ -399,7 +409,7 @@ const handleToggleAllergens = () => {
                                     type="checkbox"
                                     checked={option.state}
                                     onChange={(e) => handleAllergens(option.id, option.allergen, e.target.checked, "normal")}
-                                    className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-amber-600 focus:ring-2"
+                                    className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-red-600 focus:ring-2"
                                   />
                                   <label htmlFor={String(option.allergen)} className="ms-2 text-sm font-medium text-gray-900">
                                     {option.allergen}
@@ -412,14 +422,14 @@ const handleToggleAllergens = () => {
                       )}
                     </div>
                   </div>
-              <div className="flex gap-1"><input id="highProtein" type="checkbox" className=" accent-amber-600"/><label htmlFor="highProtein" className="  py-1 text-white">High Protein</label></div>
-              <div className="flex gap-1"><input id="lowCalorie" type="checkbox" className=" accent-amber-600"/><label htmlFor="lowCalorie" className=" py-1 text-white">Low Calorie</label></div>
+              <div className="flex gap-1"><input id="highProtein" type="checkbox" className=" accent-red-600"/><label htmlFor="highProtein" className="  py-1 text-black">High Protein</label></div>
+              <div className="flex gap-1"><input id="lowCalorie" type="checkbox" className=" accent-red-600"/><label htmlFor="lowCalorie" className=" py-1 text-black">Low Calorie</label></div>
             </div>  
            
             </div>
 
             <button
-              className="mt-4 rounded-xl bg-amber-600 px-10 py-3 font-bold text-white text-xl no-underline transition hover:bg-orange-500"
+              className="mt-4 rounded-xl bg-red-600 px-10 py-3 font-bold text-white text-xl no-underline transition hover:bg-red-500"
               onClick={() => {
                 // Handle search logic here
                 console.log("Searching with options:", {
