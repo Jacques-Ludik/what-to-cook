@@ -200,7 +200,7 @@ const handleToggleAllergens = () => {
               Ingredients
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-4">
-                    {getTopIngredients?.data && getTopIngredients?.data.map((ingredient, index) => (
+                    {getTopIngredients?.data?.map((ingredient, index) => (
                       <div className="flex gap-1" key={index}><input type="checkbox" id={"Ingredient"+String(index)} className=" accent-green-800"/><label htmlFor={"Ingredient"+String(index)} className=" text-black">{ingredient.name}</label></div>
                     ))}
             </div> 
