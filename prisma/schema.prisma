@@ -117,11 +117,11 @@ model RecipeIngredients {
     recipeId    Int
     ingredientId Int
     measure     String?
-    recipe      Recipe    @relation(fields: [recipeId], references: [id])
-    ingredient  Ingredient @relation(fields: [ingredientId], references: [id])
+    recipe      Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+    ingredient  Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
-    @@unique([recipeId, ingredientId])
+    //@@unique([recipeId, ingredientId])
 }
 
 model DietType {
@@ -174,8 +174,8 @@ model RecipeAllergens {
     id          Int       @id @default(autoincrement())
     recipeId    Int
     allergenId  Int
-    recipe      Recipe    @relation(fields: [recipeId], references: [id])
-    allergen    Allergens @relation(fields: [allergenId], references: [id])
+    recipe      Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+    allergen    Allergens @relation(fields: [allergenId], references: [id], onDelete: Cascade)
     createdAt DateTime @default(now())
     @@unique([recipeId, allergenId])
 }
