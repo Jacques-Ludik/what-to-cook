@@ -24,7 +24,15 @@ function RecipeCard({ recipe }: RecipeCardProps) {
     // This would be your styled recipe card component
     return (
         <div className="border rounded-lg shadow-lg overflow-hidden">
-            <img src={recipe.imageUrl ?? '/placeholder.png'} alt={recipe.title} className="w-full h-48 object-cover" />
+            <Image
+                src={recipe.imageUrl ?? '/placeholder.png'}
+                alt={recipe.title}
+                className="w-full h-48 object-cover"
+                width={400}
+                height={192}
+                objectFit="cover"
+                unoptimized={recipe.imageUrl == null}
+            />
             {/* <Image src={recipe.imageUrl ?? } alt={recipe.title} className="w-full h-48 object-cover" height={48} width={60}/> */}
             <div className="p-4">
                 <h3 className="font-bold text-lg truncate">{recipe.title}</h3>
