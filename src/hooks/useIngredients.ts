@@ -18,13 +18,22 @@ export function useIngredients() {
 
   // Query for logged-in users (unchanged)
   const personalizedQuery = api.recipe.getPersonalizedTopIngredients.useQuery(undefined, { 
-      enabled: sessionStatus === 'authenticated' 
+      enabled: sessionStatus === 'authenticated',
+      // === THE FIX ===
+      // Tell React Query to consider the data fresh for 5 minutes.
+      // It will not refetch on window focus or re-mount during this time.
+      staleTime: 1000 * 60 * 60, // 1 hour in milliseconds 
   });
 
   // Query for anonymous users. It's enabled only when we have the input data.
   const anonymousQuery = api.recipe.getAnonymousTopIngredients.useQuery(
     { counts: anonCountsInput ?? {} },
-    { enabled: sessionStatus === 'unauthenticated' && anonCountsInput !== null }
+    { enabled: sessionStatus === 'unauthenticated' && anonCountsInput !== null,
+      // === THE FIX ===
+      // Tell React Query to consider the data fresh for 5 minutes.
+      // It will not refetch on window focus or re-mount during this time.
+      staleTime: 1000 * 60 * 60, // 1 hour in milliseconds
+     }
   );
 
   // This single useEffect now handles the initial data-loading decision
@@ -58,9 +67,55 @@ export function useIngredients() {
 
   const isLoading = personalizedQuery.isFetching || anonymousQuery.isFetching || (sessionStatus === 'loading');
 
+  const addIngredientToList = (ingredient: { id: number; name: string }, selectedIds: Set<number>) => {
+    setIngredients(prevIngredients => {
+      // If already in list, just move to front
+      if (prevIngredients.some(i => i.id === ingredient.id)) {
+        const otherIngredients = prevIngredients.filter(i => i.id !== ingredient.id);
+        return [ingredient, ...otherIngredients];
+      }
+
+      const listToModify = [...prevIngredients];
+      
+      // If list is full (assuming 18 is the limit), remove one
+      if (listToModify.length >= 18) {
+        let indexToRemove = -1;
+
+        // Find the last unselected ingredient by searching from the end
+        for (let i = listToModify.length - 1; i >= 0; i--) {
+            if (!selectedIds.has(listToModify[i]!.id)) {
+                indexToRemove = i;
+                break;
+            }
+        }
+        
+        // If all are selected, remove the very last one
+        if (indexToRemove === -1) {
+            indexToRemove = listToModify.length - 1;
+        }
+
+        listToModify.splice(indexToRemove, 1);
+      }
+      
+      // Add the new ingredient to the beginning
+      return [ingredient, ...listToModify];
+    });
+  };
+  // const addIngredientToList = (ingredient: Ingredient) => {
+  //   setIngredients(prevIngredients => {
+  //     // Check if the ingredient is already in the list to avoid duplicates
+  //     if (prevIngredients.some(i => i.id === ingredient.id)) {
+  //       return prevIngredients;
+  //     }
+  //     // Add the new ingredient to the beginning of the list
+  //     return [ingredient, ...prevIngredients];
+  //   });
+  // };
+
   return {
     ingredients,
     isLoading,
+    addIngredientToList
   };
 }
 

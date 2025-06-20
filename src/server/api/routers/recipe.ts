@@ -499,84 +499,332 @@ getAnonymousTopIngredients: publicProcedure
         favouriteRecipeIds: z.array(z.number()).optional(),
         interestRecipeIds: z.record(z.number()).optional(), // { recipeId: count }
         ingredientIds: z.array(z.number()).optional(),
+        excludedRecipeIds: z.array(z.number()).optional(),
       })
     )
     .query(async ({ ctx, input }) => {
-      const limit = input.limit ?? 9;
-      const { cursor } = input;
+            const limit = input.limit ?? 9;
+            const { cursor } = input;
+            
+            const interestRecipeIds = Object.keys(input.interestRecipeIds ?? {}).map(Number);
+            // const allPreviouslySeenIds = [ // Consolidate all known recipe IDs
+            //     ...(input.favouriteRecipeIds ?? []),
+            //     ...interestRecipeIds,
+            // ];
+
+            // Merge all IDs that should be excluded into one list
+      const allExcludedIds = [
+          ...(input.favouriteRecipeIds ?? []),
+          ...interestRecipeIds,
+          ...(input.excludedRecipeIds ?? []), // <-- Add previously fetched IDs
+      ];
+
+            const recipes = await ctx.db.$queryRaw<
+                { id: number; title: string; imageUrl: string; protein: number; calorie: number; relevance_score: number; }[]
+            >(Prisma.sql`
+                WITH UserTaste AS (
+                    -- This CTE is unchanged
+                    SELECT
+                        ri."ingredientId",
+                        r.category,
+                        r.area
+                    FROM "Recipe" r
+                    LEFT JOIN "RecipeIngredients" ri ON r.id = ri."recipeId"
+                    WHERE r.id IN (${safeJoin(input.favouriteRecipeIds)})
+                        OR r.id IN (${safeJoin(interestRecipeIds)})
+                ),
+                RankedRecipes AS (
+                    SELECT
+                        r.id,
+                        r.title,
+                        r."imageUrl",
+                        r.protein,
+                        r.calorie,
+                        (
+                            -- SCORE COMPONENT 1: STRICT PREFERENCE MATCHING
+                            CASE WHEN
+                                ${input.estimatedTime ? Prisma.sql`r."estimatedTime" <= ${input.estimatedTime}` : Prisma.sql`1=1`}
+                            THEN 200 ELSE 0 END -- Lowered base score, as diet is now separat
+                            +
+                            CASE WHEN
+                                ${input.highProtein ? Prisma.sql`r.protein >= 80` : Prisma.sql`1=1`} -- Adjusted threshold
+                            THEN 300 ELSE 0 END -- Lowered base score, as diet is now separat
+                            +
+                            CASE WHEN
+                                ${input.lowCalorie ? Prisma.sql`r.calorie <= 700` : Prisma.sql`1=1`} -- Adjusted threshold
+                            THEN 200 ELSE 0 END -- Lowered base score, as diet is now separat
+                            +
+                            -- IMPROVEMENT 2: HEAVY DIET TYPE WEIGHTING (if not 'None')
+                            CASE WHEN 
+                                ${input.dietTypeId && input.dietTypeId !== 1 ? Prisma.sql`r."dietTypeId" = ${input.dietTypeId}` : Prisma.sql`1=0`}
+                            THEN 1200 ELSE 0 END
+                            +
+                            -- SCORE COMPONENT 2: TASTE PROFILE SIMILARITY
+                            (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (SELECT "ingredientId" FROM UserTaste)) * 15
+                            +
+                            (CASE WHEN r.category IN (SELECT category FROM UserTaste) THEN 10 ELSE 0 END)
+                            +
+                            -- SCORE COMPONENT 3: SELECTED INGREDIENTS MATCH
+                            (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (${safeJoin(input.ingredientIds)})) * 50
+                            +
+                            -- SCORE COMPONENT 4: GLOBAL POPULARITY
+                            COALESCE((SELECT COUNT(*) FROM "UserRecipes" ur WHERE ur."recipeId" = r.id), 0) * 2
+                            +
+                            (COALESCE((SELECT SUM(uri.counter) FROM "UserRecipeInterests" uri WHERE uri."recipeId" = r.id), 0) * 1)
+                            +
+                            -- SCORE COMPONENT 5: RANDOMNESS
+                            (RANDOM() * 3)
+                        ) as relevance_score
+                    FROM "Recipe" r
+                    WHERE
+                        -- IMPROVEMENT 1: STRICT ALLERGEN EXCLUSION
+                        -- This filters out recipes completely before they are even scored.
+                        NOT EXISTS (
+                            SELECT 1 FROM "RecipeAllergens" ra 
+                            WHERE ra."recipeId" = r.id AND ra."allergenId" IN (${safeJoin(input.excludedAllergenIds)})
+                        )
+                        -- Exclude recipes the user has already favourited or shown interest in
+                        AND r.id NOT IN (${safeJoin(allExcludedIds)})
+                )
+                SELECT *
+                FROM RankedRecipes
+                WHERE relevance_score > 0
+                AND (${cursor ? Prisma.sql`(relevance_score, id) < (${cursor.score}, ${cursor.id})` : Prisma.sql`1=1`})
+                ORDER BY
+                    relevance_score DESC, id DESC
+                LIMIT ${limit}
+            `);
+
+            // ... (nextCursor logic remains the same)
+            let nextCursor: typeof cursor | undefined = undefined;
+            if (recipes.length === limit) {
+                const lastRecipe = recipes[recipes.length - 1]!;
+                nextCursor = { id: lastRecipe.id, score: lastRecipe.relevance_score };
+            }
+
+            return {
+                recipes,
+                nextCursor,
+            };
+        }),
+    // .query(async ({ ctx, input }) => {
+    //   const limit = input.limit ?? 9;
+    //   const { cursor } = input;
       
-      const interestRecipeIds = Object.keys(input.interestRecipeIds ?? {}).map(Number);
+    //   const interestRecipeIds = Object.keys(input.interestRecipeIds ?? {}).map(Number);
 
-      const recipes = await ctx.db.$queryRaw<
-        { id: number; title: string; imageUrl: string; protein: number; calorie: number; relevance_score: number; }[]
-      >(Prisma.sql`
-        WITH UserTaste AS (
-          SELECT
-            ri."ingredientId",
-            r.category,
-            r.area
-          FROM "Recipe" r
-          LEFT JOIN "RecipeIngredients" ri ON r.id = ri."recipeId"
-          WHERE r.id IN (${safeJoin(input.favouriteRecipeIds)})
-            OR r.id IN (${safeJoin(interestRecipeIds)})
-        ),
-        RankedRecipes AS (
-          SELECT
-            r.id,
-            r.title,
-            r."imageUrl",
-            r.protein,
-            r.calorie,
-            (
-              CASE
-                WHEN ${input.dietTypeId ? Prisma.sql`r."dietTypeId" = ${input.dietTypeId}` : Prisma.sql`1=1`}
-                  AND ${input.estimatedTime ? Prisma.sql`r."estimatedTime" <= ${input.estimatedTime}` : Prisma.sql`1=1`}
-                  AND ${input.highProtein ? Prisma.sql`r.protein >= 30` : Prisma.sql`1=1`}
-                  AND ${input.lowCalorie ? Prisma.sql`r.calorie <= 500` : Prisma.sql`1=1`}
-                  AND NOT EXISTS (
-                    SELECT 1 FROM "RecipeAllergens" ra WHERE ra."recipeId" = r.id AND ra."allergenId" IN (${safeJoin(input.excludedAllergenIds)})
-                  )
-                THEN 1000
-                ELSE 0
-              END
-              +
-              (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (SELECT "ingredientId" FROM UserTaste)) * 15
-              +
-              (CASE WHEN r.category IN (SELECT category FROM UserTaste) THEN 10 ELSE 0 END)
-              +
-              (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (${safeJoin(input.ingredientIds)})) * 5
-              +
-              COALESCE((SELECT COUNT(*) FROM "UserRecipes" ur WHERE ur."recipeId" = r.id), 0) * 2
-              +
-              COALESCE((SELECT SUM(uri.counter) FROM "UserRecipeInterests" uri WHERE uri."recipeId" = r.id), 0) * 1
-              +
-              (RANDOM() * 5)
-            ) as relevance_score
-          FROM
-            "Recipe" r
-          WHERE
-            r.id NOT IN (${safeJoin(input.favouriteRecipeIds)})
-            AND r.id NOT IN (${safeJoin(interestRecipeIds)})
-        )
-        SELECT *
-        FROM RankedRecipes
-        WHERE relevance_score > 0
-          AND (${cursor ? Prisma.sql`(relevance_score, id) < (${cursor.score}, ${cursor.id})` : Prisma.sql`1=1`})
-        ORDER BY
-          relevance_score DESC, id DESC
-        LIMIT ${limit}
-      `);
+    //   const recipes = await ctx.db.$queryRaw<
+    //     { id: number; title: string; imageUrl: string; protein: number; calorie: number; relevance_score: number; }[]
+    //   >(Prisma.sql`
+    //     WITH UserTaste AS (
+    //       SELECT
+    //         ri."ingredientId",
+    //         r.category,
+    //         r.area
+    //       FROM "Recipe" r
+    //       LEFT JOIN "RecipeIngredients" ri ON r.id = ri."recipeId"
+    //       WHERE r.id IN (${safeJoin(input.favouriteRecipeIds)})
+    //         OR r.id IN (${safeJoin(interestRecipeIds)})
+    //     ),
+    //     RankedRecipes AS (
+    //       SELECT
+    //         r.id,
+    //         r.title,
+    //         r."imageUrl",
+    //         r.protein,
+    //         r.calorie,
+    //         (
+    //           CASE
+    //             WHEN ${input.dietTypeId ? Prisma.sql`r."dietTypeId" = ${input.dietTypeId}` : Prisma.sql`1=1`}
+    //               AND ${input.estimatedTime ? Prisma.sql`r."estimatedTime" <= ${input.estimatedTime}` : Prisma.sql`1=1`}
+    //               AND ${input.highProtein ? Prisma.sql`r.protein >= 100` : Prisma.sql`1=1`}
+    //               AND ${input.lowCalorie ? Prisma.sql`r.calorie <= 600` : Prisma.sql`1=1`}
+    //               AND NOT EXISTS (
+    //                 SELECT 1 FROM "RecipeAllergens" ra WHERE ra."recipeId" = r.id AND ra."allergenId" IN (${safeJoin(input.excludedAllergenIds)})
+    //               )
+    //             THEN 1000
+    //             ELSE 0
+    //           END
+    //           +
+    //           (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (SELECT "ingredientId" FROM UserTaste)) * 15
+    //           +
+    //           (CASE WHEN r.category IN (SELECT category FROM UserTaste) THEN 10 ELSE 0 END)
+    //           +
+    //           (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (${safeJoin(input.ingredientIds)})) * 5
+    //           +
+    //           COALESCE((SELECT COUNT(*) FROM "UserRecipes" ur WHERE ur."recipeId" = r.id), 0) * 2
+    //           +
+    //           COALESCE((SELECT SUM(uri.counter) FROM "UserRecipeInterests" uri WHERE uri."recipeId" = r.id), 0) * 1
+    //          +
+    //          (RANDOM() * 5)
+    //         ) as relevance_score
+    //       FROM
+    //         "Recipe" r
+    //       WHERE
+    //       r.id NOT IN (${safeJoin(input.favouriteRecipeIds)})
+    //         OR r.id NOT IN (${safeJoin(interestRecipeIds)})
+    //     )
+    //     SELECT *
+    //     FROM RankedRecipes
+    //     WHERE relevance_score > 0
+    //       AND (${cursor ? Prisma.sql`(relevance_score, id) < (${cursor.score}, ${cursor.id})` : Prisma.sql`1=1`})
+    //     ORDER BY
+    //       relevance_score DESC, id DESC
+    //     LIMIT ${limit}
+    //   `);
 
-      let nextCursor: typeof cursor | undefined = undefined;
-      if (recipes.length === limit) {
-        const lastRecipe = recipes[recipes.length - 1]!;
-        // Ensure score is an integer for the cursor
-        nextCursor = { id: lastRecipe.id, score: Math.floor(lastRecipe.relevance_score) };
-      }
+    //   let nextCursor: typeof cursor | undefined = undefined;
+    //   if (recipes.length === limit) {
+    //     const lastRecipe = recipes[recipes.length - 1]!;
+    //     // Ensure score is an integer for the cursor
+    //     nextCursor = { id: lastRecipe.id, score: Math.floor(lastRecipe.relevance_score) };
+    //   }
 
-      return {
-        recipes,
-        nextCursor,
-      };
-    }),
+    //   return {
+    //     recipes,
+    //     nextCursor,
+    //   };
+    // }),
+
+
+    // NEW: Procedure for combined search
+    searchRecipesAndIngredients: publicProcedure
+        .input(z.object({
+            term: z.string(),
+        }))
+        .query(async ({ ctx, input }) => {
+            const { term } = input;
+            const limit = 4; // Fetch 4 of each to get up to 8 total
+
+            // If the search term is empty, return nothing
+            if (!term.trim()) {
+                return [];
+            }
+            
+            // We use Prisma.PromisePool to run these two queries in parallel
+            const [recipes, ingredients] = await Promise.all([
+                // Query 1: Search Recipes
+                ctx.db.recipe.findMany({
+                    where: {
+                        title: {
+                            contains: term,
+                            mode: 'insensitive', // Case-insensitive search
+                        },
+                    },
+                    take: limit,
+                    select: {
+                        id: true,
+                        title: true,
+                    },
+                }),
+                // Query 2: Search Ingredients
+                ctx.db.ingredient.findMany({
+                    where: {
+                        name: {
+                            contains: term,
+                            mode: 'insensitive',
+                        },
+                    },
+                    take: limit,
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                }),
+            ]);
+
+            // Combine and format the results
+            const formattedRecipes = recipes.map(r => ({
+                id: `recipe-${r.id}`,
+                name: r.title,
+                type: 'Recipe' as const, // Use 'as const' for strong typing
+            }));
+
+            const formattedIngredients = ingredients.map(i => ({
+                id: `ingredient-${i.id}`,
+                name: i.name,
+                type: 'Ingredient' as const,
+            }));
+
+            // In a real system, you might rank these more intelligently.
+            // For now, we'll just interleave them.
+            const combinedResults = [...formattedRecipes, ...formattedIngredients];
+
+            // You could add more sophisticated ranking here if needed
+            // For example, prioritize exact matches, etc.
+
+            return combinedResults.slice(0, 8); // Ensure we don't exceed 8 total results
+        }),
+
+
+        // NEW: Get full details for a single recipe
+    getRecipeDetails: publicProcedure
+        .input(z.object({ id: z.number() }))
+        .query(async ({ ctx, input }) => {
+            const recipe = await ctx.db.recipe.findUnique({
+                where: { id: input.id },
+                include: {
+                    // Include the related data we want to show
+                    ingredients: {
+                        include: {
+                            ingredient: { // Get the ingredient name
+                                select: { name: true },
+                            },
+                        },
+                    },
+                    allergens: {
+                        include: {
+                            allergen: { // Get the allergen name
+                                select: { name: true },
+                            },
+                        },
+                    },
+                },
+            });
+
+            if (!recipe) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Recipe not found' });
+            }
+            
+            // Format the data cleanly for the frontend
+            return {
+                ...recipe,
+                ingredients: recipe.ingredients.map(i => ({
+                    name: i.ingredient.name,
+                    measure: i.measure,
+                })),
+                allergens: recipe.allergens.map(a => a.allergen.name),
+            };
+        }),
+
+
+        // NEW: Get a list of recipes by their IDs
+    getRecipesByIds: publicProcedure
+        .input(z.object({
+            ids: z.array(z.number()),
+        }))
+        .query(async ({ ctx, input }) => {
+            if (input.ids.length === 0) {
+                return []; // Return empty if no IDs are provided
+            }
+
+            const recipes = await ctx.db.recipe.findMany({
+                where: {
+                    id: {
+                        in: input.ids,
+                    },
+                },
+                select: { // Select only the data needed for the list view
+                    id: true,
+                    title: true,
+                    imageUrl: true,
+                },
+            });
+
+            // Preserve the order of the original IDs if needed (optional but good practice)
+            const recipeMap = new Map(recipes.map(r => [r.id, r]));
+            const orderedRecipes = input.ids.map(id => recipeMap.get(id)).filter(Boolean);
+            
+            return orderedRecipes;
+        }),
 });

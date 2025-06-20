@@ -135,5 +135,83 @@ export const userRouter = createTRPCRouter({
       },
     });
   }),
+
+
+  // NEW: Mutation to increment interest count for a single recipe
+    incrementRecipeInterest: protectedProcedure
+        .input(z.object({ recipeId: z.number() }))
+        .mutation(async ({ ctx, input }) => {
+            const userId = ctx.session.user.id;
+            
+            return ctx.db.userRecipeInterests.upsert({
+                where: {
+                    userId_recipeId: { userId, recipeId: input.recipeId },
+                },
+                update: {
+                    counter: { increment: 1 },
+                },
+                create: {
+                    userId,
+                    recipeId: input.recipeId,
+                    counter: 1,
+                },
+            });
+        }),
+
+    // NEW: Mutation to increment count for a single ingredient
+    incrementIngredientCount: protectedProcedure
+        .input(z.object({ ingredientId: z.number() }))
+        .mutation(async ({ ctx, input }) => {
+            const userId = ctx.session.user.id;
+            
+            return ctx.db.userIngredients.upsert({
+                where: {
+                    userId_ingredientId: { userId, ingredientId: input.ingredientId },
+                },
+                update: {
+                    counter: { increment: 1 },
+                },
+                create: {
+                    userId,
+                    ingredientId: input.ingredientId,
+                    counter: 1,
+                },
+            });
+        }),
+
+
+
+      // NEW: Mutation to add a recipe to a user's favourites
+    addFavourite: protectedProcedure
+        .input(z.object({ recipeId: z.number() }))
+        .mutation(async ({ ctx, input }) => {
+            const userId = ctx.session.user.id;
+            
+            // `create` will throw an error if the record already exists due to the @@id constraint,
+            // which is what we want. We can catch this on the client if needed, but for a
+            // well-behaved client, this is fine.
+            return ctx.db.userRecipes.create({
+                data: {
+                    userId,
+                    recipeId: input.recipeId,
+                },
+            });
+        }),
+
+    // NEW: Mutation to remove a recipe from a user's favourites
+    removeFavourite: protectedProcedure
+        .input(z.object({ recipeId: z.number() }))
+        .mutation(async ({ ctx, input }) => {
+            const userId = ctx.session.user.id;
+            
+            return ctx.db.userRecipes.delete({
+                where: {
+                    userId_recipeId: { // Use the compound primary key
+                        userId,
+                        recipeId: input.recipeId,
+                    },
+                },
+            });
+        }),
   
 });

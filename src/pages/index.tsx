@@ -10,8 +10,12 @@ import { useIngredients } from "~/hooks/useIngredients";
 import { useUserPreferences } from "~/hooks/useUserPreferences";
 import { useIngredientSelection } from "~/hooks/useIngredientSelection";
 import { useFavourites } from "~/hooks/useFavourites";
+import { useSearch } from '~/hooks/useSearch'; // <-- Import the new hook
+import { RecipeModal } from '~/components/recipeModal'; // <-- Import the modal
 // import { useInterests } from "~/hooks/useInterests"; // a hook you would create
 import { RecipeFeed } from "~/components/recipeFeed";
+import { useInterests } from "~/hooks/useInterests";
+import { FavouritesModal } from '~/components/favouritesModal';
 
 // Types
  type AllergensOptions = {
@@ -35,24 +39,142 @@ import { RecipeFeed } from "~/components/recipeFeed";
     type: string;
   };
 
+// Define a type for preferences to avoid 'any'
+type Preferences = {
+    dietTypeId: number;
+    estimatedTimeOption: string;
+    highProtein: boolean;
+    lowCalorie: boolean;
+    allergensIDList: number[];
+};
+
+// A helper function to create the input object for the query
+const createFeedInput = (
+    prefs: Preferences,
+    ingredients: { selectedIds: Iterable<number> | ArrayLike<number>; },
+    favourites: { favouriteIds: Iterable<number> | ArrayLike<number>; }
+) => {
+    return {
+        dietTypeId: prefs.dietTypeId,
+        estimatedTime: parseInt(prefs.estimatedTimeOption.split(" ")[0] ?? "0"),
+        highProtein: prefs.highProtein,
+        lowCalorie: prefs.lowCalorie,
+        excludedAllergenIds: prefs.allergensIDList,
+        favouriteRecipeIds: Array.from(favourites.favouriteIds),
+        ingredientIds: Array.from(ingredients.selectedIds),
+    };
+};
+
 export default function Home() {
 
   //Hooks
   // Use the custom hook to get ingredients. It handles all the logic!
-  const { ingredients, isLoading: ingredientsLoading } = useIngredients();
-  const {
-    dietTypeId, setDietTypeId,
-    estimatedTimeOption, setEstimatedTimeOption,
-    allergensIDList, setAllergensIDList,
-    highProtein, setHighProtein,
-    lowCalorie, setLowCalorie,
-    isLoading: prefsLoading,
-    savePreferencesToDb,
-  } = useUserPreferences();
-  const { selectedIds, toggleIngredient, saveSelection  } = useIngredientSelection();
-    const { favouriteIds } = useFavourites();
+  const { ingredients, isLoading: ingredientsLoading, addIngredientToList } = useIngredients();
+  // These hooks manage the "live" state as the user clicks things
+  const prefs = useUserPreferences();
+  const { selectedIds, toggleIngredient, saveSelection, addAndPersistSelection } = useIngredientSelection();
+    const { favouriteIds, toggleFavourite } = useFavourites();
+    const { addInterest } = useInterests();
   // const { interestData } = useInterests();
 
+  // === The "Staged" Input State ===
+    // This state holds the input that is sent to the query.
+    // It's ONLY updated when the "Let's Cook" button is clicked.
+    type FeedInput = ReturnType<typeof createFeedInput>;
+    const [stagedFeedInput, setStagedFeedInput] = useState<FeedInput | null>(null);
+
+    // This effect runs ONLY when the initial preferences are loaded.
+    // It sets the initial state for the recipe feed.
+    useEffect(() => {
+        if (!prefs.isLoading && stagedFeedInput === null) {
+            setStagedFeedInput(createFeedInput(prefs, { selectedIds }, { favouriteIds }));
+        }
+    }, [prefs.isLoading]);
+
+    const handleLetsCook = () => {
+        // 1. Persist the current selections
+        prefs.savePreferencesToDb();
+        saveSelection();
+
+        // 2. Update the staged input to trigger a new feed fetch
+        const newFeedInput = createFeedInput(prefs, { selectedIds }, { favouriteIds });
+        console.log("New Feed Input: ", newFeedInput);
+        setStagedFeedInput(newFeedInput);
+    };
+
+    //Search
+    const { searchTerm, setSearchTerm, searchResults, isLoading: isSearchLoading } = useSearch();
+
+    // State to manage if the results dropdown is open
+    const [isResultsOpen, setIsResultsOpen] = useState(false);
+    const searchContainerRef = useRef<HTMLDivElement>(null);
+
+    // Effect to close the dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+                setIsResultsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+        if (e.target.value.length > 1) {
+            setIsResultsOpen(true);
+        } else {
+            setIsResultsOpen(false);
+        }
+    };
+
+    //Click on search results
+    // === State for the Recipe Modal ===
+    const [viewingRecipeId, setViewingRecipeId] = useState<number | null>(null);
+
+    // ... search dropdown state and handlers ...
+    const handleSearchResultClick = (result: { id: string; name: string; type: 'Recipe' | 'Ingredient' }) => {
+        const entityId = parseInt(result.id.split('-')[1] ?? '0');
+
+        if (result.type === 'Recipe') {
+            setViewingRecipeId(entityId);
+            // Immediately track this interaction
+            addInterest(entityId);
+        } else { // It's an ingredient
+            // Add to the visual list, providing the current `selectedIds` for the removal logic
+            addIngredientToList({ id: entityId, name: result.name }, selectedIds);
+            
+            // Select it and update its count in DB/localStorage
+            addAndPersistSelection(entityId);
+        }
+        // Close the search results dropdown
+        setIsResultsOpen(false);
+    };
+    // const handleSearchResultClick = (result: { id: string; name: string; type: 'Recipe' | 'Ingredient' }) => {
+    //     if (result.type === 'Recipe') {
+    //         const recipeId = parseInt(result.id.split('-')[1] ?? '0');
+    //         setViewingRecipeId(recipeId);
+    //     } else { // It's an ingredient
+    //         const ingredientId = parseInt(result.id.split('-')[1] ?? '0');
+    //         // Add the ingredient to the top of the visible list
+    //         addIngredientToList({ id: ingredientId, name: result.name });
+    //         // Programmatically check its checkbox
+    //         addSelection(ingredientId);
+    //     }
+    //     // Close the search results dropdown
+    //     setIsResultsOpen(false);
+    // };
+
+    //Favourites
+    const [isFavouritesModalOpen, setIsFavouritesModalOpen] = useState(false);
+
+    // This function will now be used by BOTH the FavouritesModal and the RecipeFeed
+    const openRecipeModal = (recipeId: number) => {
+        setViewingRecipeId(recipeId);
+    };
+
+  //-----------------------------------------------------DropDowns-----------------------------------------------------------------
   const dietTypeRef = useRef<HTMLDivElement>(null);
   const btnDietTypeRef = useRef<HTMLButtonElement>(null);
   const [estimatedTime, setEstimatedTime] = useState(false);
@@ -63,12 +185,10 @@ export default function Home() {
   const [allergensOption, setAllergensOption] = useState("None");
   const allergensRef = useRef<HTMLDivElement>(null);
   const btnAllergensRef = useRef<HTMLButtonElement>(null);
-
-
 //------------------ DIET TYPE --------------------
 const dietTypeOptions = [{ id: 1, type: 'None' }, {id:2, type: 'Pescatarian'}, {id:3, type:'Pollotarian'}, {id:4, type:'Vegetarian'}, {id:5, type:'Vegan'}, {id:6, type:'Halal'}, {id:7, type:'Keto'}];
 const [dietType, setDietType] = useState(false);
-const [dietTypeOption, setDietTypeOption] = useState<DietType>(dietTypeOptions.find((dietType) => dietType.id === dietTypeId) ?? { id: 1, type: 'None'});
+const [dietTypeOption, setDietTypeOption] = useState<DietType>(dietTypeOptions.find((dietType) => dietType.id === prefs.dietTypeId) ?? { id: 1, type: 'None'});
 const handleToggleDietType = () => {
     setDietType(!dietType);
   };
@@ -77,7 +197,7 @@ const handleToggleDietType = () => {
     if (!dietType_) return;
     setDietTypeOption(dietType_);
     //added
-    setDietTypeId(id);
+    prefs.setDietTypeId(id);
     setDietType(false);
   }
   useEffect(() => {
@@ -98,9 +218,9 @@ const handleToggleDietType = () => {
   }, []);
   //set diettype to returned diettype from db
   useEffect(() =>{
-    const dietType_ = dietTypeOptions.find((dietType) => dietType.id == dietTypeId);
+    const dietType_ = dietTypeOptions.find((dietType) => dietType.id == prefs.dietTypeId);
     setDietTypeOption(dietType_ ?? { id: 1, type: 'None' });
-  }, [dietTypeId]);
+  }, [prefs.dietTypeId]);
   
 
   //------------------ ESTIMATED TIME --------------------
@@ -109,7 +229,7 @@ const handleToggleEstimatedTime = () => {
     setEstimatedTime(!estimatedTime);
   };
   const handleEstimatedTimeOption = (option: SetStateAction<string>) => {
-    setEstimatedTimeOption(option);
+    prefs.setEstimatedTimeOption(option);
     setEstimatedTime(false);
   };
   useEffect(() => {
@@ -165,14 +285,14 @@ const handleToggleAllergens = () => {
       setAllergensList(allergens_.sort((a, b) => a.id - b.id));
       setAllergensListOptions(allergensListOptions.map((allergen) => ({ ...allergen, state: true })));
       //added
-      setAllergensIDList(allergensListOptions.map((allergen) => allergen.id));
+      prefs.setAllergensIDList(allergensListOptions.map((allergen) => allergen.id));
     } else if (selectionAllergens === "clear") {
       setAllergensOption("Clear All");
       setAllergensSelection({ allSelected: false, clear: state });
       setAllergensList([]);
       setAllergensListOptions(allergensListOptions.map((allergen) => ({ ...allergen, state: false })));
       //added
-      setAllergensIDList([]);
+      prefs.setAllergensIDList([]);
     } else if (selectionAllergens === "normal") {
       setAllergensOption(option);
       setAllergensSelection({ allSelected: false, clear: false });
@@ -185,7 +305,7 @@ const handleToggleAllergens = () => {
         if (!allergensIDList_.includes(id)) {
           setAllergensList([...allergensList, allergen_]);
           //added
-          setAllergensIDList([...allergensIDList_, allergen_.id]);
+          prefs.setAllergensIDList([...allergensIDList_, allergen_.id]);
         }
         setAllergensListOptions(allergensListOptions.map((allergen) => (allergen.id === id ? { ...allergen, state: true } : allergen)));
       } else {
@@ -193,19 +313,19 @@ const handleToggleAllergens = () => {
         setAllergensList(updatedAllergensList.sort((a, b) => a.id - b.id));
         setAllergensListOptions(allergensListOptions.map((allergen) => (allergen.id === id ? { ...allergen, state: false } : allergen)));
         //added
-        setAllergensIDList(updatedAllergensList.map((allergen) => allergen.id).filter((allergen) => allergen != id));
+        prefs.setAllergensIDList(updatedAllergensList.map((allergen) => allergen.id).filter((allergen) => allergen != id));
       }
     }
   }
   useEffect(() => {
       //set allergens options
     const allergensOptions = [{ id: 1, name: 'Wheat'}, {id:2, name:'Milk'}, { id: 3, name: 'Eggs'}, { id: 4, name: 'Sulfur Dioxide'}, { id: 5, name: 'Celery'}, { id: 6, name: 'Soybeans'}, { id: 7, name: 'Fish'}, { id: 8, name: 'Tree Nuts'}, { id: 9, name: 'Mustard'}, { id: 10, name: 'Sesame'}, { id: 11, name: 'Crustacean Shellfish'}, { id: 12, name: 'Peanuts'}, { id: 13, name: 'Molluscs'}, { id: 14, name: "Lupin"}];
-    console.log("Allergens List should be here: ", allergensIDList);
+    console.log("Allergens List should be here: ", prefs.allergensIDList);
 
-      const initialAllergensListOptions = allergensIDList.length > 0 ? allergensOptions.map((allergen, index) => ({
+      const initialAllergensListOptions = prefs.allergensIDList.length > 0 ? allergensOptions.map((allergen, index) => ({
       id: index + 1,
       allergen: allergen.name,
-      state: allergensIDList.includes(allergen.id),
+      state: prefs.allergensIDList.includes(allergen.id),
     })) : allergensOptions.map((allergen, index) => ({
       id: index + 1,
       allergen: allergen.name,
@@ -214,35 +334,8 @@ const handleToggleAllergens = () => {
 
     setAllergensListOptions(initialAllergensListOptions);
     setAllergensList(initialAllergensListOptions.filter((allergen) => allergen.state === true).map((allergen) => ({allergen: allergen.allergen, id: allergen.id})));
-    },[allergensIDList]);
-  // useEffect(() => {
-  //   //set allergens options
-  //   const allergensOptions = [{ id: 1, name: 'Wheat'}, {id:2, name:'Milk'}, { id: 3, name: 'Eggs'}, { id: 4, name: 'Sulfur Dioxide'}, { id: 5, name: 'Celery'}, { id: 6, name: 'Soybeans'}, { id: 7, name: 'Fish'}, { id: 8, name: 'Tree Nuts'}, { id: 9, name: 'Mustard'}, { id: 10, name: 'Sesame'}, { id: 11, name: 'Crustacean Shellfish'}, { id: 12, name: 'Peanuts'}, { id: 13, name: 'Molluscs'}, { id: 14, name: "Lupin"}];
-  //   // const allergensOptions = [ { id: 1, name: "Milk"} , { id: 2, name: "Eggs"}, { id: 3, name: "Fish"}, { id: 4, name: "Crustacean Shellfish"}, { id: 5, name: "Tree Nuts"}, { id: 6, name: "Peanuts"}, { id: 7, name: "Wheat"}, { id: 8, name: "Soybeans"}, { id: 9, name: "Sesame"}, { id: 10, name: "Mustard"}, { id: 11, name: "Celery"}, { id: 12, name: "Molluscs"}, { id: 13, name: "Lupin"}, { id: 14, name: "Sulfur dioxide"}];
-  //   const initialAllergensListOptions = allergensIDList.length > 0 ? allergensOptions.map((allergen, index) => ({
-  //     id: index + 1,
-  //     allergen: allergen.name,
-  //     state: allergensIDList.includes(allergen.id),
-  //   })) : allergensOptions.map((allergen, index) => ({
-  //     id: index + 1,
-  //     allergen: allergen.name,
-  //     state: false,
-  //   }));
-  //   console.log("Allergens List should be here: ", allergensIDList);
-
-  //   setAllergensListOptions(initialAllergensListOptions);
-  // }, []);
-
-
-  // ------------------------Let's Cook Button----------------------
-  const handleLetsCook = () => {
-    // This function is now also responsible for saving preferences for logged-in users
-    savePreferencesToDb();
-    saveSelection();
-
-    // Your search/navigation logic would go here
-    console.log("Searching with preferences and ingredients...");
-  };
+    },[prefs.allergensIDList]);
+//---------------------------------------------------------------------------------------------------------------------------------------------------
 
   return (
     <>
@@ -254,20 +347,75 @@ const handleToggleAllergens = () => {
       <main className="flex min-h-screen flex-col items-center bg-[#faebd7]">
         {/* from-emerald-500 to-emerald-900   text-white     text-amber-600     #FAF9F6   #faebd7*/}
         <header className="flex w-full items-center justify-center relative p-3">
+          {/* === FAVOURITES BUTTON (TOP-LEFT) === */}
+                    <div className="absolute top-5 left-5 z-20">
+                        <button
+                            onClick={() => setIsFavouritesModalOpen(true)}
+                            className="p-2 rounded-2xl flex gap-2 bg-green-800 text-white shadow-md hover:bg-green-700 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800"
+                            aria-label="View your favourite recipes"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                            </svg> Favourites
+                        </button>
+                    </div>
             <div className="flex items-center gap-2">
                 <h1 className="text-xl font-extrabold tracking-tight text-black sm:text-[3rem]">
                     What to <span className="text-green-800">Cook</span>
                 </h1>
             </div>
             {/* Add the AuthShowcase component to the top right */}
-            <div className="absolute top-5 right-5">
+            <div className="absolute top-5 right-5 z-20">
             <AuthShowcase />
             </div>
         </header>
-          <input
+        {/* --- SEARCH BAR AND RESULTS --- */}
+                <div className="relative w-full max-w-md" ref={searchContainerRef}>
+                    <input
+                        type="text"
+                        placeholder="Search for ingredients/recipes..."
+                        className="mt-2 w-full rounded-lg border border-gray-900 bg-white p-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-800"
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                        onFocus={() => { if (searchTerm.length > 1) setIsResultsOpen(true); }}
+                    />
+                    
+                    {isResultsOpen && (
+                        <div className="absolute z-20 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg">
+                            {isSearchLoading && <div className="p-2 text-gray-500">Searching...</div>}
+
+                            {!isSearchLoading && searchResults && searchResults.length > 0 && (
+                                <ul className="max-h-60 overflow-auto">
+                                    {searchResults.map((result) => (
+                                        <li
+                                            key={result.id}
+                                            className="cursor-pointer p-2 hover:bg-green-100"
+                                            // You would add an onClick handler here to navigate
+                                            // to the recipe page or add the ingredient
+                                            // onClick={() => {
+                                            //     console.log('Selected:', result);
+                                            //     setIsResultsOpen(false);
+                                            // }}
+                                            onClick={() => handleSearchResultClick(result)}
+                                        >
+                                            {result.name}
+                                            <span className="ml-2 text-xs text-gray-500">({result.type})</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                            
+                            {!isSearchLoading && searchResults && searchResults.length === 0 && searchTerm.length > 1 && (
+                                <div className="p-2 text-gray-500">No results found.</div>
+                            )}
+                        </div>
+                    )}
+                </div>
+                {/* --- END SEARCH BAR --- */}
+          {/* <input
             type="text"
             placeholder="Search for ingredients/recipes..."
-            className="mt-2 w-full max-w-md rounded-lg border border-gray-900 bg-white p-1 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-800"/>  
+            className="mt-2 w-full max-w-md rounded-lg border border-gray-900 bg-white p-1 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-800"/>   */}
           <div className="mt-4 flex flex-col items-center gap-2">
             <div className="flex flex-col items-center gap-[0.3rem] border-2 border-green-900 p-4 rounded-2xl w-full max-w-[47%]">
             <p className="text-lg text-black font-bold">
@@ -332,7 +480,7 @@ const handleToggleAllergens = () => {
                         type="button"
                         onClick={handleToggleEstimatedTime}
                       >
-                        {estimatedTimeOption + " "}
+                        {prefs.estimatedTimeOption + " "}
                         <svg className="ms-3 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
                           <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4" />
                         </svg>
@@ -422,34 +570,45 @@ const handleToggleAllergens = () => {
                       )}
                     </div>
                   </div>
-              <div className="flex gap-1"><input id="highProtein" type="checkbox" checked={highProtein} onChange={(e) => setHighProtein(e.target.checked)} className=" accent-green-800"/><label htmlFor="highProtein" className="  py-1 text-black">High Protein</label></div>
-              <div className="flex gap-1"><input id="lowCalorie" type="checkbox" checked={lowCalorie} onChange={(e) => setLowCalorie(e.target.checked)} className=" accent-green-800"/><label htmlFor="lowCalorie" className=" py-1 text-black">Low Calorie</label></div>
+              <div className="flex gap-1"><input id="highProtein" type="checkbox" checked={prefs.highProtein} onChange={(e) => prefs.setHighProtein(e.target.checked)} className=" accent-green-800"/><label htmlFor="highProtein" className="  py-1 text-black">High Protein</label></div>
+              <div className="flex gap-1"><input id="lowCalorie" type="checkbox" checked={prefs.lowCalorie} onChange={(e) => prefs.setLowCalorie(e.target.checked)} className=" accent-green-800"/><label htmlFor="lowCalorie" className=" py-1 text-black">Low Calorie</label></div>
             </div>  
            
             </div>
 
             <button
               className="mt-4 rounded-xl bg-green-800 px-10 py-3 font-bold text-white text-xl no-underline transition hover:bg-green-700"
-              onClick={() => handleLetsCook()} disabled={prefsLoading || ingredientsLoading}> Let&apos;s Cook!</button>   
+              onClick={() => handleLetsCook()} disabled={prefs.isLoading || ingredientsLoading}> Let&apos;s Cook!</button>   
 </div>
 
 <div className="w-full max-w-6xl mt-12">
             <h2 className="text-3xl font-bold mb-6 text-center">Recommended For You</h2>
-            <RecipeFeed
-                input={{
-                    dietTypeId: dietTypeId,
-                    estimatedTime: parseInt(estimatedTimeOption), // Assuming estimatedTime is a string like "30 minutes"
-                    highProtein: highProtein,
-                    lowCalorie: lowCalorie,
-                    excludedAllergenIds: allergensIDList,
-                    favouriteRecipeIds: Array.from(favouriteIds),
-                    // interestRecipeIds: interestData, // from your useInterests hook
-                    ingredientIds: Array.from(selectedIds),
-                }}
-            />
+            {stagedFeedInput && <RecipeFeed
+            // By changing the key, we tell React to unmount the old component and
+          // mount a brand new one, completely resetting the infinite query state.
+          key={JSON.stringify(stagedFeedInput)}
+          input={stagedFeedInput}
+          onRecipeClick={openRecipeModal}
+            />}
         </div>
 
       </main>
+      {/* === Render the Modals === */}
+            <FavouritesModal
+                isOpen={isFavouritesModalOpen}
+                closeModal={() => setIsFavouritesModalOpen(false)}
+                favouriteIds={Array.from(favouriteIds)}
+                onRecipeClick={openRecipeModal}
+            />
+            {viewingRecipeId !== null && (
+                <RecipeModal
+                    isOpen={viewingRecipeId !== null}
+                    recipeId={viewingRecipeId}
+                    closeModal={() => setViewingRecipeId(null)}
+                    isFavourited={favouriteIds.has(viewingRecipeId)}
+                    toggleFavourite={toggleFavourite}
+                />
+            )}
     </>
   );
 }

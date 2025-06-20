@@ -14,6 +14,7 @@ export function useIngredientSelection() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   
   const updateCountsMutation = api.user.updateUserIngredientCounts.useMutation();
+  const incrementCountMutation = api.user.incrementIngredientCount.useMutation();
 
   // Load initial selected checkboxes from localStorage
   useEffect(() => {
@@ -68,10 +69,39 @@ export function useIngredientSelection() {
     }
   }, [sessionStatus, selectedIds, updateCountsMutation]);
 
+
+  // NEW function to add a single selection and immediately update its count
+  const addAndPersistSelection = useCallback((id: number) => {
+    // Update local checkbox state
+    setSelectedIds(prev => new Set(prev).add(id));
+
+    // Update count in DB or localStorage
+    if (sessionStatus === 'authenticated') {
+      incrementCountMutation.mutate({ ingredientId: id });
+    } else if (sessionStatus === 'unauthenticated') {
+      try {
+        const existingCountsRaw = localStorage.getItem(ANON_COUNTS_KEY);
+        const existingCounts: AnonIngredientCount = existingCountsRaw ? JSON.parse(existingCountsRaw) as AnonIngredientCount : {};
+        existingCounts[id] = (existingCounts[id] ?? 0) + 1;
+        localStorage.setItem(ANON_COUNTS_KEY, JSON.stringify(existingCounts));
+      } catch (error) {
+        console.error("Failed to update anonymous ingredient count:", error);
+      }
+    }
+  }, [sessionStatus, incrementCountMutation]);
+  // const addSelection = useCallback((id: number) => {
+  //   setSelectedIds(prev => {
+  //       const newSet = new Set(prev);
+  //       newSet.add(id);
+  //       return newSet;
+  //   });
+  // }, []);
+
   return {
     selectedIds,
     toggleIngredient,
     saveSelection, // <-- Renamed for clarity
+    addAndPersistSelection,
     isSaving: updateCountsMutation.isPending,
   };
 }
