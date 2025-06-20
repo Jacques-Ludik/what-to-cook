@@ -5,6 +5,13 @@ import Image from "next/image";
 import { use, useEffect, useRef, useState, type SetStateAction } from "react";
 import { recipesToSeed } from "recipes-data"; // Import the data
 import { api } from "~/utils/api";
+import { AuthShowcase } from "~/components/AuthShowcase";
+import { useIngredients } from "~/hooks/useIngredients";
+import { useUserPreferences } from "~/hooks/useUserPreferences";
+import { useIngredientSelection } from "~/hooks/useIngredientSelection";
+import { useFavourites } from "~/hooks/useFavourites";
+// import { useInterests } from "~/hooks/useInterests"; // a hook you would create
+import { RecipeFeed } from "~/components/recipeFeed";
 
 // Types
  type AllergensOptions = {
@@ -30,16 +37,26 @@ import { api } from "~/utils/api";
 
 export default function Home() {
 
-  //routes
-  const getTopIngredients = api.recipe.getTopIngredients.useQuery();
+  //Hooks
+  // Use the custom hook to get ingredients. It handles all the logic!
+  const { ingredients, isLoading: ingredientsLoading } = useIngredients();
+  const {
+    dietTypeId, setDietTypeId,
+    estimatedTimeOption, setEstimatedTimeOption,
+    allergensIDList, setAllergensIDList,
+    highProtein, setHighProtein,
+    lowCalorie, setLowCalorie,
+    isLoading: prefsLoading,
+    savePreferencesToDb,
+  } = useUserPreferences();
+  const { selectedIds, toggleIngredient, saveSelection  } = useIngredientSelection();
+    const { favouriteIds } = useFavourites();
+  // const { interestData } = useInterests();
 
-  // Declare variables
-  const [dietType, setDietType] = useState(false);
-  const [dietTypeOption, setDietTypeOption] = useState<DietType>({ id: 1, type: "None" });
   const dietTypeRef = useRef<HTMLDivElement>(null);
   const btnDietTypeRef = useRef<HTMLButtonElement>(null);
   const [estimatedTime, setEstimatedTime] = useState(false);
-  const [estimatedTimeOption, setEstimatedTimeOption] = useState("30 minutes");
+  //const [estimatedTimeOption, setEstimatedTimeOption] = useState("30 minutes");
   const estimatedTimeRef = useRef<HTMLDivElement>(null);
   const btnEstimatedTimeRef = useRef<HTMLButtonElement>(null);
   const [allergens, setAllergens] = useState(false);
@@ -50,6 +67,8 @@ export default function Home() {
 
 //------------------ DIET TYPE --------------------
 const dietTypeOptions = [{ id: 1, type: 'None' }, {id:2, type: 'Pescatarian'}, {id:3, type:'Pollotarian'}, {id:4, type:'Vegetarian'}, {id:5, type:'Vegan'}, {id:6, type:'Halal'}, {id:7, type:'Keto'}];
+const [dietType, setDietType] = useState(false);
+const [dietTypeOption, setDietTypeOption] = useState<DietType>(dietTypeOptions.find((dietType) => dietType.id === dietTypeId) ?? { id: 1, type: 'None'});
 const handleToggleDietType = () => {
     setDietType(!dietType);
   };
@@ -57,6 +76,8 @@ const handleToggleDietType = () => {
     const dietType_ =  dietTypeOptions.find((diet) => diet.id === id);
     if (!dietType_) return;
     setDietTypeOption(dietType_);
+    //added
+    setDietTypeId(id);
     setDietType(false);
   }
   useEffect(() => {
@@ -75,6 +96,11 @@ const handleToggleDietType = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+  //set diettype to returned diettype from db
+  useEffect(() =>{
+    const dietType_ = dietTypeOptions.find((dietType) => dietType.id == dietTypeId);
+    setDietTypeOption(dietType_ ?? { id: 1, type: 'None' });
+  }, [dietTypeId]);
   
 
   //------------------ ESTIMATED TIME --------------------
@@ -123,6 +149,7 @@ const handleToggleAllergens = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
   const [allergensListOptions, setAllergensListOptions] = useState<AllergensOptions[]>([]);
   const [allergensSelection, setAllergensSelection] = useState<AllergensSelect>();
   const [allergensList, setAllergensList] = useState<Allergens[]>([]);
@@ -137,11 +164,15 @@ const handleToggleAllergens = () => {
       }));
       setAllergensList(allergens_.sort((a, b) => a.id - b.id));
       setAllergensListOptions(allergensListOptions.map((allergen) => ({ ...allergen, state: true })));
+      //added
+      setAllergensIDList(allergensListOptions.map((allergen) => allergen.id));
     } else if (selectionAllergens === "clear") {
       setAllergensOption("Clear All");
       setAllergensSelection({ allSelected: false, clear: state });
       setAllergensList([]);
       setAllergensListOptions(allergensListOptions.map((allergen) => ({ ...allergen, state: false })));
+      //added
+      setAllergensIDList([]);
     } else if (selectionAllergens === "normal") {
       setAllergensOption(option);
       setAllergensSelection({ allSelected: false, clear: false });
@@ -150,32 +181,68 @@ const handleToggleAllergens = () => {
           id: id,
           allergen: String(option),
         };
-        const allergensIDList = allergensList.map((allergen) => allergen.id);
-        if (!allergensIDList.includes(id)) {
+        const allergensIDList_ = allergensList.map((allergen) => allergen.id);
+        if (!allergensIDList_.includes(id)) {
           setAllergensList([...allergensList, allergen_]);
+          //added
+          setAllergensIDList([...allergensIDList_, allergen_.id]);
         }
         setAllergensListOptions(allergensListOptions.map((allergen) => (allergen.id === id ? { ...allergen, state: true } : allergen)));
       } else {
         const updatedAllergensList = allergensList.filter((allergen) => allergen.id !== id);
         setAllergensList(updatedAllergensList.sort((a, b) => a.id - b.id));
         setAllergensListOptions(allergensListOptions.map((allergen) => (allergen.id === id ? { ...allergen, state: false } : allergen)));
+        //added
+        setAllergensIDList(updatedAllergensList.map((allergen) => allergen.id).filter((allergen) => allergen != id));
       }
     }
   }
   useEffect(() => {
-    //set allergens options
+      //set allergens options
     const allergensOptions = [{ id: 1, name: 'Wheat'}, {id:2, name:'Milk'}, { id: 3, name: 'Eggs'}, { id: 4, name: 'Sulfur Dioxide'}, { id: 5, name: 'Celery'}, { id: 6, name: 'Soybeans'}, { id: 7, name: 'Fish'}, { id: 8, name: 'Tree Nuts'}, { id: 9, name: 'Mustard'}, { id: 10, name: 'Sesame'}, { id: 11, name: 'Crustacean Shellfish'}, { id: 12, name: 'Peanuts'}, { id: 13, name: 'Molluscs'}, { id: 14, name: "Lupin"}];
-    // const allergensOptions = [ { id: 1, name: "Milk"} , { id: 2, name: "Eggs"}, { id: 3, name: "Fish"}, { id: 4, name: "Crustacean Shellfish"}, { id: 5, name: "Tree Nuts"}, { id: 6, name: "Peanuts"}, { id: 7, name: "Wheat"}, { id: 8, name: "Soybeans"}, { id: 9, name: "Sesame"}, { id: 10, name: "Mustard"}, { id: 11, name: "Celery"}, { id: 12, name: "Molluscs"}, { id: 13, name: "Lupin"}, { id: 14, name: "Sulfur dioxide"}];
-    const initialAllergensListOptions = allergensOptions.map((allergen, index) => ({
+    console.log("Allergens List should be here: ", allergensIDList);
+
+      const initialAllergensListOptions = allergensIDList.length > 0 ? allergensOptions.map((allergen, index) => ({
+      id: index + 1,
+      allergen: allergen.name,
+      state: allergensIDList.includes(allergen.id),
+    })) : allergensOptions.map((allergen, index) => ({
       id: index + 1,
       allergen: allergen.name,
       state: false,
     }));
-    setAllergensListOptions(initialAllergensListOptions);
 
-    //set top ingredients
-    console.log("Top ingredients: ", getTopIngredients.data);
-  }, []);
+    setAllergensListOptions(initialAllergensListOptions);
+    setAllergensList(initialAllergensListOptions.filter((allergen) => allergen.state === true).map((allergen) => ({allergen: allergen.allergen, id: allergen.id})));
+    },[allergensIDList]);
+  // useEffect(() => {
+  //   //set allergens options
+  //   const allergensOptions = [{ id: 1, name: 'Wheat'}, {id:2, name:'Milk'}, { id: 3, name: 'Eggs'}, { id: 4, name: 'Sulfur Dioxide'}, { id: 5, name: 'Celery'}, { id: 6, name: 'Soybeans'}, { id: 7, name: 'Fish'}, { id: 8, name: 'Tree Nuts'}, { id: 9, name: 'Mustard'}, { id: 10, name: 'Sesame'}, { id: 11, name: 'Crustacean Shellfish'}, { id: 12, name: 'Peanuts'}, { id: 13, name: 'Molluscs'}, { id: 14, name: "Lupin"}];
+  //   // const allergensOptions = [ { id: 1, name: "Milk"} , { id: 2, name: "Eggs"}, { id: 3, name: "Fish"}, { id: 4, name: "Crustacean Shellfish"}, { id: 5, name: "Tree Nuts"}, { id: 6, name: "Peanuts"}, { id: 7, name: "Wheat"}, { id: 8, name: "Soybeans"}, { id: 9, name: "Sesame"}, { id: 10, name: "Mustard"}, { id: 11, name: "Celery"}, { id: 12, name: "Molluscs"}, { id: 13, name: "Lupin"}, { id: 14, name: "Sulfur dioxide"}];
+  //   const initialAllergensListOptions = allergensIDList.length > 0 ? allergensOptions.map((allergen, index) => ({
+  //     id: index + 1,
+  //     allergen: allergen.name,
+  //     state: allergensIDList.includes(allergen.id),
+  //   })) : allergensOptions.map((allergen, index) => ({
+  //     id: index + 1,
+  //     allergen: allergen.name,
+  //     state: false,
+  //   }));
+  //   console.log("Allergens List should be here: ", allergensIDList);
+
+  //   setAllergensListOptions(initialAllergensListOptions);
+  // }, []);
+
+
+  // ------------------------Let's Cook Button----------------------
+  const handleLetsCook = () => {
+    // This function is now also responsible for saving preferences for logged-in users
+    savePreferencesToDb();
+    saveSelection();
+
+    // Your search/navigation logic would go here
+    console.log("Searching with preferences and ingredients...");
+  };
 
   return (
     <>
@@ -186,10 +253,17 @@ const handleToggleAllergens = () => {
       </Head>
       <main className="flex min-h-screen flex-col items-center bg-[#faebd7]">
         {/* from-emerald-500 to-emerald-900   text-white     text-amber-600     #FAF9F6   #faebd7*/}
-          <div className="flex gap-2"><h1 className="text-xl font-extrabold tracking-tight text-black sm:text-[3rem]">
-            What to <span className="text-green-800">Cook</span>
-          </h1>
-        </div>
+        <header className="flex w-full items-center justify-center relative p-3">
+            <div className="flex items-center gap-2">
+                <h1 className="text-xl font-extrabold tracking-tight text-black sm:text-[3rem]">
+                    What to <span className="text-green-800">Cook</span>
+                </h1>
+            </div>
+            {/* Add the AuthShowcase component to the top right */}
+            <div className="absolute top-5 right-5">
+            <AuthShowcase />
+            </div>
+        </header>
           <input
             type="text"
             placeholder="Search for ingredients/recipes..."
@@ -200,9 +274,11 @@ const handleToggleAllergens = () => {
               Ingredients
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-4">
-                    {getTopIngredients?.data?.map((ingredient, index) => (
-                      <div className="flex gap-1" key={index}><input type="checkbox" id={"Ingredient"+String(index)} className=" accent-green-800"/><label htmlFor={"Ingredient"+String(index)} className=" text-black">{ingredient.name}</label></div>
-                    ))}
+                  {ingredientsLoading ? (
+                        <p className="text-black">Loading ingredients...</p>
+                    ) : (ingredients.map((ingredient, index) => (
+                      <div className="flex gap-1" key={index}><input type="checkbox" id={"Ingredient"+String(index)} checked={selectedIds.has(ingredient.id)} onChange={() => toggleIngredient(ingredient.id)} className="accent-green-800"/><label htmlFor={"Ingredient"+String(index)} className=" text-black">{ingredient.name}</label></div>
+                    )))}
             </div> 
 </div>
 
@@ -346,23 +422,32 @@ const handleToggleAllergens = () => {
                       )}
                     </div>
                   </div>
-              <div className="flex gap-1"><input id="highProtein" type="checkbox" className=" accent-green-800"/><label htmlFor="highProtein" className="  py-1 text-black">High Protein</label></div>
-              <div className="flex gap-1"><input id="lowCalorie" type="checkbox" className=" accent-green-800"/><label htmlFor="lowCalorie" className=" py-1 text-black">Low Calorie</label></div>
+              <div className="flex gap-1"><input id="highProtein" type="checkbox" checked={highProtein} onChange={(e) => setHighProtein(e.target.checked)} className=" accent-green-800"/><label htmlFor="highProtein" className="  py-1 text-black">High Protein</label></div>
+              <div className="flex gap-1"><input id="lowCalorie" type="checkbox" checked={lowCalorie} onChange={(e) => setLowCalorie(e.target.checked)} className=" accent-green-800"/><label htmlFor="lowCalorie" className=" py-1 text-black">Low Calorie</label></div>
             </div>  
            
             </div>
 
             <button
               className="mt-4 rounded-xl bg-green-800 px-10 py-3 font-bold text-white text-xl no-underline transition hover:bg-green-700"
-              onClick={() => {
-                // Handle search logic here
-                console.log("Searching with options:", {
-                  dietType: dietTypeOption,
-                  estimatedTime: estimatedTimeOption,
-                  allergens: allergensOption,
-                });}}> Let&apos;s Cook!</button>   
+              onClick={() => handleLetsCook()} disabled={prefsLoading || ingredientsLoading}> Let&apos;s Cook!</button>   
 </div>
 
+<div className="w-full max-w-6xl mt-12">
+            <h2 className="text-3xl font-bold mb-6 text-center">Recommended For You</h2>
+            <RecipeFeed
+                input={{
+                    dietTypeId: dietTypeId,
+                    estimatedTime: parseInt(estimatedTimeOption), // Assuming estimatedTime is a string like "30 minutes"
+                    highProtein: highProtein,
+                    lowCalorie: lowCalorie,
+                    excludedAllergenIds: allergensIDList,
+                    favouriteRecipeIds: Array.from(favouriteIds),
+                    // interestRecipeIds: interestData, // from your useInterests hook
+                    ingredientIds: Array.from(selectedIds),
+                }}
+            />
+        </div>
 
       </main>
     </>

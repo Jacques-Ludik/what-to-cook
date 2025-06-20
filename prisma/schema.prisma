@@ -66,9 +66,10 @@ model User {
     dietType      DietType? @relation(fields: [dietTypeId], references: [id])
     dietTypeId    Int?
     favourites   UserRecipes[]
+    interests    UserRecipeInterests[]
     ingredients     UserIngredients[]
     UserAllergens UserAllergens[]
-    estimatedTime String?
+    estimatedTime Int?
     highProtein   Boolean? @default(false)
     lowCalorie    Boolean? @default(false)
     createdAt    DateTime  @default(now())
@@ -108,6 +109,7 @@ model Recipe {
     protein Int?
     calorie Int?
     user    UserRecipes[]
+    usersInterested UserRecipeInterests[]
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 }
@@ -136,6 +138,16 @@ model DietType {
 model UserRecipes {
     userId    String
     recipeId  Int
+    user      User     @relation(fields: [userId], references: [id])
+    recipe    Recipe   @relation(fields: [recipeId], references: [id])
+    createdAt DateTime @default(now())
+    @@id([userId, recipeId])
+}
+
+model UserRecipeInterests {
+    userId    String
+    recipeId  Int
+    counter   Int
     user      User     @relation(fields: [userId], references: [id])
     recipe    Recipe   @relation(fields: [recipeId], references: [id])
     createdAt DateTime @default(now())
