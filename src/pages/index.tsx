@@ -2,7 +2,7 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import Head from "next/head";
 import Link from "next/link";
 import Image from "next/image";
-import { use, useEffect, useRef, useState, type SetStateAction } from "react";
+import { use, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import { recipesToSeed } from "recipes-data"; // Import the data
 import { api } from "~/utils/api";
 import { AuthShowcase } from "~/components/AuthShowcase";
@@ -18,6 +18,8 @@ import { useInterests } from "~/hooks/useInterests";
 import { FavouritesModal } from '~/components/favouritesModal';
 import { ScrollToTopButton } from '~/components/scrollToTopButton';
 import { useRouter } from 'next/router';
+import { Dropdown, type DropdownOption } from '~/components/ui/dropDown';
+import { MultiSelectDropdown } from '~/components/ui/multiSelectDropDown';
 
 // Types
  type AllergensOptions = {
@@ -187,20 +189,6 @@ export default function Home() {
         // Close the search results dropdown
         setIsResultsOpen(false);
     };
-    // const handleSearchResultClick = (result: { id: string; name: string; type: 'Recipe' | 'Ingredient' }) => {
-    //     if (result.type === 'Recipe') {
-    //         const recipeId = parseInt(result.id.split('-')[1] ?? '0');
-    //         setViewingRecipeId(recipeId);
-    //     } else { // It's an ingredient
-    //         const ingredientId = parseInt(result.id.split('-')[1] ?? '0');
-    //         // Add the ingredient to the top of the visible list
-    //         addIngredientToList({ id: ingredientId, name: result.name });
-    //         // Programmatically check its checkbox
-    //         addSelection(ingredientId);
-    //     }
-    //     // Close the search results dropdown
-    //     setIsResultsOpen(false);
-    // };
 
     //Favourites
     const [isFavouritesModalOpen, setIsFavouritesModalOpen] = useState(false);
@@ -211,167 +199,205 @@ export default function Home() {
     };
 
   //-----------------------------------------------------DropDowns-----------------------------------------------------------------
-  const dietTypeRef = useRef<HTMLDivElement>(null);
-  const btnDietTypeRef = useRef<HTMLButtonElement>(null);
-  const [estimatedTime, setEstimatedTime] = useState(false);
-  //const [estimatedTimeOption, setEstimatedTimeOption] = useState("30 minutes");
-  const estimatedTimeRef = useRef<HTMLDivElement>(null);
-  const btnEstimatedTimeRef = useRef<HTMLButtonElement>(null);
-  const [allergens, setAllergens] = useState(false);
-  const [allergensOption, setAllergensOption] = useState("None");
-  const allergensRef = useRef<HTMLDivElement>(null);
-  const btnAllergensRef = useRef<HTMLButtonElement>(null);
-//------------------ DIET TYPE --------------------
-const dietTypeOptions = [{ id: 1, type: 'None' }, {id:2, type: 'Pescatarian'}, {id:3, type:'Pollotarian'}, {id:4, type:'Vegetarian'}, {id:5, type:'Vegan'}, {id:6, type:'Halal'}, {id:7, type:'Keto'}];
-const [dietType, setDietType] = useState(false);
-const [dietTypeOption, setDietTypeOption] = useState<DietType>(dietTypeOptions.find((dietType) => dietType.id === prefs.dietTypeId) ?? { id: 1, type: 'None'});
-const handleToggleDietType = () => {
-    setDietType(!dietType);
-  };
-  const handleDietTypeOption = (option: SetStateAction<string>, id: number) => {
-    const dietType_ =  dietTypeOptions.find((diet) => diet.id === id);
-    if (!dietType_) return;
-    setDietTypeOption(dietType_);
-    //added
-    prefs.setDietTypeId(id);
-    setDietType(false);
-  }
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dietTypeRef.current &&
-        !dietTypeRef.current.contains(event.target as Node) &&
-        btnDietTypeRef.current &&
-        !btnDietTypeRef.current.contains(event.target as Node)
-      ) {
-        setDietType(false);
-      }
+
+
+ // DIET TYPE
+    const dietTypeOptions: DropdownOption[] = [{ id: 1, label: 'None' }, {id:2, label: 'Pescatarian'}, {id:3, label:'Pollotarian'}, {id:4, label:'Vegetarian'}, {id:5, label:'Vegan'}, {id:6, label:'Halal'}, {id:7, label:'Keto'}];
+    const selectedDietType = useMemo(() => dietTypeOptions.find(opt => opt.id === prefs.dietTypeId), [prefs.dietTypeId]);
+    const handleDietTypeChange = (option: DropdownOption) => {
+        prefs.setDietTypeId(option.id as number);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+
+    // ESTIMATED TIME
+    const timeOptions: DropdownOption[] = ['15 minutes', '30 minutes', '45 minutes', '60 minutes', '75 minutes', '90 minutes', '120 minutes'].map(t => ({ id: t, label: t }));
+    const selectedTime = useMemo(() => timeOptions.find(opt => opt.id === prefs.estimatedTimeOption), [prefs.estimatedTimeOption]);
+    const handleTimeChange = (option: DropdownOption) => {
+        prefs.setEstimatedTimeOption(option.id as string);
     };
-  }, []);
-  //set diettype to returned diettype from db
-  useEffect(() =>{
-    const dietType_ = dietTypeOptions.find((dietType) => dietType.id == prefs.dietTypeId);
-    setDietTypeOption(dietType_ ?? { id: 1, type: 'None' });
-  }, [prefs.dietTypeId]);
+
+    // ALLERGENS
+    const allergenOptions = [{ id: 1, label: 'Wheat'}, {id:2, label:'Milk'}, { id: 3, label: 'Eggs'}, { id: 4, label: 'Sulfur Dioxide'}, { id: 5, label: 'Celery'}, { id: 6, label: 'Soybeans'}, { id: 7, label: 'Fish'}, { id: 8, label: 'Tree Nuts'}, { id: 9, label: 'Mustard'}, { id: 10, label: 'Sesame'}, { id: 11, label: 'Crustacean Shellfish'}, { id: 12, label: 'Peanuts'}, { id: 13, label: 'Molluscs'}, { id: 14, label: "Lupin"}];
+    const allergenOptionsWithState = useMemo(() => {
+        return allergenOptions.map(opt => ({
+            ...opt,
+            checked: prefs.allergensIDList.includes(opt.id),
+        }));
+    }, [prefs.allergensIDList]);
+    
+    const handleAllergenChange = (id: number, checked: boolean) => {
+        prefs.setAllergensIDList(prev => 
+            checked ? [...prev, id] : prev.filter(pId => pId !== id)
+        );
+    };
+    const handleSelectAllAllergens = () => prefs.setAllergensIDList(allergenOptions.map(opt => opt.id));
+    const handleClearAllAllergens = () => prefs.setAllergensIDList([]);
+
+
+
+
+
+// //old code
+//   const dietTypeRef = useRef<HTMLDivElement>(null);
+//   const btnDietTypeRef = useRef<HTMLButtonElement>(null);
+//   const [estimatedTime, setEstimatedTime] = useState(false);
+//   //const [estimatedTimeOption, setEstimatedTimeOption] = useState("30 minutes");
+//   const estimatedTimeRef = useRef<HTMLDivElement>(null);
+//   const btnEstimatedTimeRef = useRef<HTMLButtonElement>(null);
+//   const [allergens, setAllergens] = useState(false);
+//   const [allergensOption, setAllergensOption] = useState("None");
+//   const allergensRef = useRef<HTMLDivElement>(null);
+//   const btnAllergensRef = useRef<HTMLButtonElement>(null);
+// //------------------ DIET TYPE --------------------
+// const dietTypeOptions = [{ id: 1, type: 'None' }, {id:2, type: 'Pescatarian'}, {id:3, type:'Pollotarian'}, {id:4, type:'Vegetarian'}, {id:5, type:'Vegan'}, {id:6, type:'Halal'}, {id:7, type:'Keto'}];
+// const [dietType, setDietType] = useState(false);
+// const [dietTypeOption, setDietTypeOption] = useState<DietType>(dietTypeOptions.find((dietType) => dietType.id === prefs.dietTypeId) ?? { id: 1, type: 'None'});
+// const handleToggleDietType = () => {
+//     setDietType(!dietType);
+//   };
+//   const handleDietTypeOption = (option: SetStateAction<string>, id: number) => {
+//     const dietType_ =  dietTypeOptions.find((diet) => diet.id === id);
+//     if (!dietType_) return;
+//     setDietTypeOption(dietType_);
+//     //added
+//     prefs.setDietTypeId(id);
+//     setDietType(false);
+//   }
+//   useEffect(() => {
+//     const handleClickOutside = (event: MouseEvent) => {
+//       if (
+//         dietTypeRef.current &&
+//         !dietTypeRef.current.contains(event.target as Node) &&
+//         btnDietTypeRef.current &&
+//         !btnDietTypeRef.current.contains(event.target as Node)
+//       ) {
+//         setDietType(false);
+//       }
+//     };
+//     document.addEventListener("mousedown", handleClickOutside);
+//     return () => {
+//       document.removeEventListener("mousedown", handleClickOutside);
+//     };
+//   }, []);
+//   //set diettype to returned diettype from db
+//   useEffect(() =>{
+//     const dietType_ = dietTypeOptions.find((dietType) => dietType.id == prefs.dietTypeId);
+//     setDietTypeOption(dietType_ ?? { id: 1, type: 'None' });
+//   }, [prefs.dietTypeId]);
   
 
-  //------------------ ESTIMATED TIME --------------------
-const estimatedTimeOptions = ['15 minutes', '30 minutes', '45 minutes', '60 minutes', '75 minutes', '90 minutes',  '120 minutes'];
-const handleToggleEstimatedTime = () => {
-    setEstimatedTime(!estimatedTime);
-  };
-  const handleEstimatedTimeOption = (option: SetStateAction<string>) => {
-    prefs.setEstimatedTimeOption(option);
-    setEstimatedTime(false);
-  };
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        estimatedTimeRef.current &&
-        !estimatedTimeRef.current.contains(event.target as Node) &&
-        btnEstimatedTimeRef.current &&
-        !btnEstimatedTimeRef.current.contains(event.target as Node)
-      ) {
-        setEstimatedTime(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+//   //------------------ ESTIMATED TIME --------------------
+// const estimatedTimeOptions = ['15 minutes', '30 minutes', '45 minutes', '60 minutes', '75 minutes', '90 minutes',  '120 minutes'];
+// const handleToggleEstimatedTime = () => {
+//     setEstimatedTime(!estimatedTime);
+//   };
+//   const handleEstimatedTimeOption = (option: SetStateAction<string>) => {
+//     prefs.setEstimatedTimeOption(option);
+//     setEstimatedTime(false);
+//   };
+//   useEffect(() => {
+//     const handleClickOutside = (event: MouseEvent) => {
+//       if (
+//         estimatedTimeRef.current &&
+//         !estimatedTimeRef.current.contains(event.target as Node) &&
+//         btnEstimatedTimeRef.current &&
+//         !btnEstimatedTimeRef.current.contains(event.target as Node)
+//       ) {
+//         setEstimatedTime(false);
+//       }
+//     };
+//     document.addEventListener("mousedown", handleClickOutside);
+//     return () => {
+//       document.removeEventListener("mousedown", handleClickOutside);
+//     };
+//   }, []);
 
-  //------------------ ALLERGENS --------------------
-const handleToggleAllergens = () => {
-    setAllergens(!allergens);
-  };
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        allergensRef.current &&
-        !allergensRef.current.contains(event.target as Node) &&
-        btnAllergensRef.current &&
-        !btnAllergensRef.current.contains(event.target as Node)
-      ) {
-        setAllergens(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+//   //------------------ ALLERGENS --------------------
+// const handleToggleAllergens = () => {
+//     setAllergens(!allergens);
+//   };
+//   useEffect(() => {
+//     const handleClickOutside = (event: MouseEvent) => {
+//       if (
+//         allergensRef.current &&
+//         !allergensRef.current.contains(event.target as Node) &&
+//         btnAllergensRef.current &&
+//         !btnAllergensRef.current.contains(event.target as Node)
+//       ) {
+//         setAllergens(false);
+//       }
+//     };
+//     document.addEventListener("mousedown", handleClickOutside);
+//     return () => {
+//       document.removeEventListener("mousedown", handleClickOutside);
+//     };
+//   }, []);
 
-  const [allergensListOptions, setAllergensListOptions] = useState<AllergensOptions[]>([]);
-  const [allergensSelection, setAllergensSelection] = useState<AllergensSelect>();
-  const [allergensList, setAllergensList] = useState<Allergens[]>([]);
+//   const [allergensListOptions, setAllergensListOptions] = useState<AllergensOptions[]>([]);
+//   const [allergensSelection, setAllergensSelection] = useState<AllergensSelect>();
+//   const [allergensList, setAllergensList] = useState<Allergens[]>([]);
 
-  const handleAllergens = (id: number, option: SetStateAction<string>, state: boolean, selectionAllergens: string) => {
-    if (selectionAllergens === "allSelected") {
-      setAllergensOption("Select All");
-      setAllergensSelection({ allSelected: state, clear: false });
-      const allergens_ = allergensListOptions.map((allergen) => ({
-        id: allergen.id,
-        allergen: allergen.allergen,
-      }));
-      setAllergensList(allergens_.sort((a, b) => a.id - b.id));
-      setAllergensListOptions(allergensListOptions.map((allergen) => ({ ...allergen, state: true })));
-      //added
-      prefs.setAllergensIDList(allergensListOptions.map((allergen) => allergen.id));
-    } else if (selectionAllergens === "clear") {
-      setAllergensOption("Clear All");
-      setAllergensSelection({ allSelected: false, clear: state });
-      setAllergensList([]);
-      setAllergensListOptions(allergensListOptions.map((allergen) => ({ ...allergen, state: false })));
-      //added
-      prefs.setAllergensIDList([]);
-    } else if (selectionAllergens === "normal") {
-      setAllergensOption(option);
-      setAllergensSelection({ allSelected: false, clear: false });
-      if (state) {
-        const allergen_: Allergens = {
-          id: id,
-          allergen: String(option),
-        };
-        const allergensIDList_ = allergensList.map((allergen) => allergen.id);
-        if (!allergensIDList_.includes(id)) {
-          setAllergensList([...allergensList, allergen_]);
-          //added
-          prefs.setAllergensIDList([...allergensIDList_, allergen_.id]);
-        }
-        setAllergensListOptions(allergensListOptions.map((allergen) => (allergen.id === id ? { ...allergen, state: true } : allergen)));
-      } else {
-        const updatedAllergensList = allergensList.filter((allergen) => allergen.id !== id);
-        setAllergensList(updatedAllergensList.sort((a, b) => a.id - b.id));
-        setAllergensListOptions(allergensListOptions.map((allergen) => (allergen.id === id ? { ...allergen, state: false } : allergen)));
-        //added
-        prefs.setAllergensIDList(updatedAllergensList.map((allergen) => allergen.id).filter((allergen) => allergen != id));
-      }
-    }
-  }
-  useEffect(() => {
-      //set allergens options
-    const allergensOptions = [{ id: 1, name: 'Wheat'}, {id:2, name:'Milk'}, { id: 3, name: 'Eggs'}, { id: 4, name: 'Sulfur Dioxide'}, { id: 5, name: 'Celery'}, { id: 6, name: 'Soybeans'}, { id: 7, name: 'Fish'}, { id: 8, name: 'Tree Nuts'}, { id: 9, name: 'Mustard'}, { id: 10, name: 'Sesame'}, { id: 11, name: 'Crustacean Shellfish'}, { id: 12, name: 'Peanuts'}, { id: 13, name: 'Molluscs'}, { id: 14, name: "Lupin"}];
-    console.log("Allergens List should be here: ", prefs.allergensIDList);
+//   const handleAllergens = (id: number, option: SetStateAction<string>, state: boolean, selectionAllergens: string) => {
+//     if (selectionAllergens === "allSelected") {
+//       setAllergensOption("Select All");
+//       setAllergensSelection({ allSelected: state, clear: false });
+//       const allergens_ = allergensListOptions.map((allergen) => ({
+//         id: allergen.id,
+//         allergen: allergen.allergen,
+//       }));
+//       setAllergensList(allergens_.sort((a, b) => a.id - b.id));
+//       setAllergensListOptions(allergensListOptions.map((allergen) => ({ ...allergen, state: true })));
+//       //added
+//       prefs.setAllergensIDList(allergensListOptions.map((allergen) => allergen.id));
+//     } else if (selectionAllergens === "clear") {
+//       setAllergensOption("Clear All");
+//       setAllergensSelection({ allSelected: false, clear: state });
+//       setAllergensList([]);
+//       setAllergensListOptions(allergensListOptions.map((allergen) => ({ ...allergen, state: false })));
+//       //added
+//       prefs.setAllergensIDList([]);
+//     } else if (selectionAllergens === "normal") {
+//       setAllergensOption(option);
+//       setAllergensSelection({ allSelected: false, clear: false });
+//       if (state) {
+//         const allergen_: Allergens = {
+//           id: id,
+//           allergen: String(option),
+//         };
+//         const allergensIDList_ = allergensList.map((allergen) => allergen.id);
+//         if (!allergensIDList_.includes(id)) {
+//           setAllergensList([...allergensList, allergen_]);
+//           //added
+//           prefs.setAllergensIDList([...allergensIDList_, allergen_.id]);
+//         }
+//         setAllergensListOptions(allergensListOptions.map((allergen) => (allergen.id === id ? { ...allergen, state: true } : allergen)));
+//       } else {
+//         const updatedAllergensList = allergensList.filter((allergen) => allergen.id !== id);
+//         setAllergensList(updatedAllergensList.sort((a, b) => a.id - b.id));
+//         setAllergensListOptions(allergensListOptions.map((allergen) => (allergen.id === id ? { ...allergen, state: false } : allergen)));
+//         //added
+//         prefs.setAllergensIDList(updatedAllergensList.map((allergen) => allergen.id).filter((allergen) => allergen != id));
+//       }
+//     }
+//   }
+//   useEffect(() => {
+//       //set allergens options
+//     const allergensOptions = [{ id: 1, name: 'Wheat'}, {id:2, name:'Milk'}, { id: 3, name: 'Eggs'}, { id: 4, name: 'Sulfur Dioxide'}, { id: 5, name: 'Celery'}, { id: 6, name: 'Soybeans'}, { id: 7, name: 'Fish'}, { id: 8, name: 'Tree Nuts'}, { id: 9, name: 'Mustard'}, { id: 10, name: 'Sesame'}, { id: 11, name: 'Crustacean Shellfish'}, { id: 12, name: 'Peanuts'}, { id: 13, name: 'Molluscs'}, { id: 14, name: "Lupin"}];
+//     console.log("Allergens List should be here: ", prefs.allergensIDList);
 
-      const initialAllergensListOptions = prefs.allergensIDList.length > 0 ? allergensOptions.map((allergen, index) => ({
-      id: index + 1,
-      allergen: allergen.name,
-      state: prefs.allergensIDList.includes(allergen.id),
-    })) : allergensOptions.map((allergen, index) => ({
-      id: index + 1,
-      allergen: allergen.name,
-      state: false,
-    }));
+//       const initialAllergensListOptions = prefs.allergensIDList.length > 0 ? allergensOptions.map((allergen, index) => ({
+//       id: index + 1,
+//       allergen: allergen.name,
+//       state: prefs.allergensIDList.includes(allergen.id),
+//     })) : allergensOptions.map((allergen, index) => ({
+//       id: index + 1,
+//       allergen: allergen.name,
+//       state: false,
+//     }));
 
-    setAllergensListOptions(initialAllergensListOptions);
-    setAllergensList(initialAllergensListOptions.filter((allergen) => allergen.state === true).map((allergen) => ({allergen: allergen.allergen, id: allergen.id})));
-    },[prefs.allergensIDList]);
-//---------------------------------------------------------------------------------------------------------------------------------------------------
+//     setAllergensListOptions(initialAllergensListOptions);
+//     setAllergensList(initialAllergensListOptions.filter((allergen) => allergen.state === true).map((allergen) => ({allergen: allergen.allergen, id: allergen.id})));
+//     },[prefs.allergensIDList]);
+// //---------------------------------------------------------------------------------------------------------------------------------------------------
 
 // === DERIVED STATE: Is any modal currently open? ===
     // This variable will be true if either the favourites modal is open
@@ -459,163 +485,72 @@ const handleToggleAllergens = () => {
                     )}
                 </div>
                 {/* --- END SEARCH BAR --- */}
-          {/* --- FILTERS CONTAINER --- */}
-  {/* This container will stack its children vertically on mobile and horizontally on larger screens */}
-  <div className="mt-8 flex w-full max-w-7xl flex-col items-center justify-center gap-6 lg:flex-row lg:items-start">
-    
-    {/* --- INGREDIENTS BOX --- */}
-    {/* On mobile, it takes full width. On large screens, it takes roughly half the width. */}
-    <div className="flex w-full flex-col gap-2 rounded-2xl border-2 border-green-900 p-4 lg:w-1/2">
-      <p className="text-center text-lg font-bold text-black">Ingredients</p>
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-                  {ingredientsLoading ? (
+
+
+{/* --- FILTERS CONTAINER --- */}
+{/* On large screens, use `grid` and `grid-cols-2` for perfect alignment and equal height. */}
+<div className="mt-8 grid w-full max-w-7xl grid-cols-1 gap-6 lg:grid-cols-2">
+
+  {/* --- INGREDIENTS BOX --- */}
+  {/* The `h-full` class is important for stretching inside a grid cell if needed, though grid usually handles this. */}
+  <div className="flex h-full w-full flex-col gap-2 rounded-2xl border-2 border-green-900 p-4">
+    <p className="text-center text-lg font-bold text-black">Ingredients</p>
+    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2">
+      {ingredientsLoading ? (
                         <p className="text-black">Loading ingredients...</p>
                     ) : (ingredients.map((ingredient, index) => (
                       <div className="flex gap-1" key={index}><input type="checkbox" id={"Ingredient"+String(index)} checked={selectedIds.has(ingredient.id)} onChange={() => toggleIngredient(ingredient.id)} className="accent-green-800"/><label htmlFor={"Ingredient"+String(index)} className=" text-black">{ingredient.name}</label></div>
                     )))}
-            </div> 
+    </div>
+  </div>
+
+  {/* === REFACTORED PREFERENCES BOX === */}
+  <div className="flex h-full w-full flex-col gap-4 rounded-2xl border-2 border-green-900 p-4">
+    <p className="text-center text-lg font-bold text-black">Preferences</p>
+    {/* Use `space-y-4` for consistent vertical spacing */}
+    <div className="flex flex-col space-y-4">
+    
+      {/* Diet Type */}
+      {/* Use `justify-start` and `gap-4` to bring the label and dropdown closer */}
+      <div className="flex items-center justify-between gap-4">
+        <span className="font-bold text-black">Diet Type</span>
+        <Dropdown options={dietTypeOptions} selectedValue={selectedDietType} onChange={handleDietTypeChange} />
+      </div>
+
+      {/* Estimated Time */}
+      <div className="flex items-center justify-between gap-4">
+        <span className="font-bold text-black">Time</span>
+        <Dropdown options={timeOptions} selectedValue={selectedTime} onChange={handleTimeChange} />
+      </div>
+
+      {/* Allergens */}
+      <div className="flex items-center justify-between gap-4">
+        <span className="font-bold text-black">Exclude Allergens</span>
+        <MultiSelectDropdown
+          label="Select..."
+          options={allergenOptionsWithState}
+          onSelectAll={handleSelectAllAllergens}
+          onClearAll={handleClearAllAllergens}
+          onOptionChange={handleAllergenChange}
+        />
+      </div>
+
+      {/* High Protein / Low Calorie Checkboxes */}
+      {/* Use `border-t` for a clean visual separator */}
+      <div className="flex items-center gap-4 border-t border-green-900/20 pt-4 sm:justify-center sm:gap-8">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input id="highProtein" type="checkbox" checked={prefs.highProtein} onChange={(e) => prefs.setHighProtein(e.target.checked)} className="h-4 w-4 accent-green-800" />
+          <span className="text-black">High Protein</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input id="lowCalorie" type="checkbox" checked={prefs.lowCalorie} onChange={(e) => prefs.setLowCalorie(e.target.checked)} className="h-4 w-4 accent-green-800" />
+          <span className="text-black">Low Calorie</span>
+        </label>
+      </div>
+
+    </div>
+  </div>
 </div>
-
-{/* --- PREFERENCES BOX --- */}
-    {/* Same responsive width logic as the ingredients box */}
-    <div className="flex w-full flex-col gap-3 rounded-2xl border-2 border-green-900 p-4 lg:w-1/2">
-      <p className="text-center text-lg font-bold text-black">Preferences</p>
-      {/* This grid will stack items and then become a 2-column grid on medium screens */}
-      <div className="grid grid-cols-1 items-center justify-items-center gap-4 md:grid-cols-2">
-        {/* Individual preference item */}
-        <div className="flex w-full items-center justify-between md:justify-start md:gap-4">
-          <label htmlFor="dietType" className="font-bold text-black">Diet Type</label>
-          <div className="relative">
-                      <button
-                        ref={btnDietTypeRef}
-                        className=" inline-flex items-center rounded-lg bg-green-800 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
-                        type="button"
-                        onClick={handleToggleDietType}
-                      >
-                        {dietTypeOption.type + " "}
-                        <svg className="ms-3 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4" />
-                        </svg>
-                      </button>
-                      {dietType && (
-                        <div ref={dietTypeRef} className="absolute top-11 z-10 w-32 divide-y divide-gray-100 rounded-lg bg-white shadow">
-                          <ul className="py-2 text-sm text-gray-700" aria-labelledby="dropdownHoverButton">
-                            {dietTypeOptions.map((option) => (
-                              <li key={option.id} onClick={() => handleDietTypeOption(option.type, option.id)}>
-                                <button className="block px-4 py-2 hover:bg-gray-100">{option.type}</button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-              {/* Individual preference item */}
-        <div className="flex w-full items-center justify-between md:justify-start md:gap-4">
-          <label htmlFor="estimatedTime" className="font-bold text-black">Time</label>
-          <div className="relative">
-                      <button
-                        ref={btnEstimatedTimeRef}
-                        className=" inline-flex items-center rounded-lg bg-green-800 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
-                        type="button"
-                        onClick={handleToggleEstimatedTime}
-                      >
-                        {prefs.estimatedTimeOption + " "}
-                        <svg className="ms-3 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4" />
-                        </svg>
-                      </button>
-                      {estimatedTime && (
-                        <div ref={estimatedTimeRef} className="absolute top-11 z-10 w-36 divide-y divide-gray-100 rounded-lg bg-white shadow">
-                          <ul className="py-2 text-sm text-gray-700" aria-labelledby="dropdownHoverButton">
-                            {estimatedTimeOptions.map((option) => (
-                              <li key={option} onClick={() => handleEstimatedTimeOption(option)}>
-                                <button className="block px-4 py-2 hover:bg-gray-100">{option}</button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                      {/* Individual preference item */}
-        <div className="flex w-full items-center justify-between md:justify-start md:gap-4">
-          <label htmlFor="allergens" className="font-bold text-black">Allergens</label>
-          <div className="relative">
-                      <button
-                        ref={btnAllergensRef}
-                        className=" inline-flex items-center rounded-lg bg-green-800 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
-                        type="button"
-                        onClick={handleToggleAllergens}
-                      >
-                        {allergensOption + " "}
-                        <svg className="ms-3 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">   
-                          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4" />
-                        </svg>
-                      </button>
-                      {allergens && (
-                        <div ref={allergensRef} className="absolute top-11 z-10 w-44 divide-y divide-gray-100 rounded-lg bg-white shadow">
-
-                        <ul className="py-2 text-sm text-gray-700" aria-labelledby="dropdownHoverButton">
-                            <li key={1}>
-                              <div className="flex items-center px-2">
-                                <input
-                                  id="1"
-                                  type="checkbox"
-                                  checked={allergensSelection?.allSelected}
-                                  onChange={(e) => handleAllergens(0, "", e.target.checked, "allSelected")}
-                                  className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-green-800 focus:ring-2"
-                                />
-                                <label htmlFor="1" className="ms-2 text-sm font-bold text-gray-900">
-                                  Select All
-                                </label>
-                              </div>
-                            </li>
-                            <li key={2}>
-                              <div className="flex items-center px-2">
-                                <input
-                                  id="2"
-                                  type="checkbox"
-                                  checked={allergensSelection?.clear}
-                                  onChange={(e) => handleAllergens(0, "", e.target.checked, "clear")}
-                                  className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-green-800 focus:ring-2"
-                                />
-                                <label htmlFor="2" className="ms-2 text-sm font-bold text-gray-900">
-                                  Clear All
-                                </label>
-                              </div>
-                            </li>
-                            {allergensListOptions?.map((option) => (
-                              <li key={option.allergen}>
-                                <div className="flex items-center px-2">
-                                  <input
-                                    id={String(option.allergen)}
-                                    type="checkbox"
-                                    checked={option.state}
-                                    onChange={(e) => handleAllergens(option.id, option.allergen, e.target.checked, "normal")}
-                                    className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-green-800 focus:ring-2"
-                                  />
-                                  <label htmlFor={String(option.allergen)} className="ms-2 text-sm font-medium text-gray-900">
-                                    {option.allergen}
-                                  </label>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-              {/* The simple checkboxes can be grouped */}
-        <div className="flex w-full flex-col items-start gap-1">
-             <div className="flex gap-2"><input id="highProtein" type="checkbox" checked={prefs.highProtein} onChange={(e) => prefs.setHighProtein(e.target.checked)} className=" accent-green-800"/><label htmlFor="highProtein" className="text-black">High Protein</label></div>
-             <div className="flex gap-2"><input id="lowCalorie" type="checkbox" checked={prefs.lowCalorie} onChange={(e) => prefs.setLowCalorie(e.target.checked)} className=" accent-green-800"/><label htmlFor="lowCalorie" className="text-black">Low Calorie</label></div>
-            </div>  
-           </div>
-            </div>
-            </div>
 
             {/* --- LET'S COOK BUTTON --- */}
   <div className="my-8">
@@ -664,10 +599,219 @@ const handleToggleAllergens = () => {
 
 
 
+//old ingredient and preferences
+//           {/* --- FILTERS CONTAINER --- */}
+//   {/* This container will stack its children vertically on mobile and horizontally on larger screens */}
+//   <div className="mt-8 flex w-full max-w-7xl flex-col items-center justify-center gap-6 lg:flex-row lg:items-start">
+    
+//     {/* --- INGREDIENTS BOX --- */}
+//     {/* On mobile, it takes full width. On large screens, it takes roughly half the width. */}
+//     <div className="flex w-full flex-col gap-2 rounded-2xl border-2 border-green-900 p-4 lg:w-1/2">
+//       <p className="text-center text-lg font-bold text-black">Ingredients</p>
+//       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+//                   {ingredientsLoading ? (
+//                         <p className="text-black">Loading ingredients...</p>
+//                     ) : (ingredients.map((ingredient, index) => (
+//                       <div className="flex gap-1" key={index}><input type="checkbox" id={"Ingredient"+String(index)} checked={selectedIds.has(ingredient.id)} onChange={() => toggleIngredient(ingredient.id)} className="accent-green-800"/><label htmlFor={"Ingredient"+String(index)} className=" text-black">{ingredient.name}</label></div>
+//                     )))}
+//             </div> 
+// </div>
+
+// {/* === REFACTORED PREFERENCES BOX === */}
+//             <div className="flex w-full flex-col gap-4 rounded-2xl border-2 border-green-900 p-4 lg:w-1/2">
+//                 <p className="text-center text-lg font-bold text-black">Preferences</p>
+//                 <div className="grid grid-cols-1 items-center gap-y-6 sm:grid-cols-2 sm:gap-x-4">
+//                     {/* Diet Type */}
+//                     <div className="flex items-center justify-between">
+//                         <span className="font-bold text-black">Diet Type</span>
+//                         <Dropdown options={dietTypeOptions} selectedValue={selectedDietType} onChange={handleDietTypeChange} />
+//                     </div>
+
+//                     {/* Estimated Time */}
+//                     <div className="flex items-center justify-between">
+//                         <span className="font-bold text-black">Time</span>
+//                         <Dropdown options={timeOptions} selectedValue={selectedTime} onChange={handleTimeChange} />
+//                     </div>
+
+//                     {/* Allergens */}
+//                     <div className="flex items-center justify-between sm:col-span-2">
+//                         <span className="font-bold text-black">Exclude Allergens</span>
+//                         <MultiSelectDropdown 
+//                             label="Select..."
+//                             options={allergenOptionsWithState}
+//                             onSelectAll={handleSelectAllAllergens}
+//                             onClearAll={handleClearAllAllergens}
+//                             onOptionChange={handleAllergenChange}
+//                         />
+//                     </div>
+                    
+//                     {/* High Protein / Low Calorie Checkboxes */}
+//                     <div className="flex flex-col items-start gap-2 sm:col-span-2 sm:flex-row sm:justify-center sm:gap-8">
+//                         <label className="flex items-center gap-2 cursor-pointer">
+//                             <input id="highProtein" type="checkbox" checked={prefs.highProtein} onChange={(e) => prefs.setHighProtein(e.target.checked)} className="h-4 w-4 accent-green-800"/>
+//                             <span className="text-black">High Protein</span>
+//                         </label>
+//                         <label className="flex items-center gap-2 cursor-pointer">
+//                             <input id="lowCalorie" type="checkbox" checked={prefs.lowCalorie} onChange={(e) => prefs.setLowCalorie(e.target.checked)} className="h-4 w-4 accent-green-800"/>
+//                             <span className="text-black">Low Calorie</span>
+//                         </label>
+//                     </div>
+//                 </div>
+//             </div>
+//             </div>
 
 
 
 
+
+
+
+
+
+
+
+
+
+//Old preference box code:
+// {/* --- PREFERENCES BOX --- */}
+//     {/* Same responsive width logic as the ingredients box */}
+//     <div className="flex w-full flex-col gap-3 rounded-2xl border-2 border-green-900 p-4 lg:w-1/2">
+//       <p className="text-center text-lg font-bold text-black">Preferences</p>
+//       {/* This grid will stack items and then become a 2-column grid on medium screens */}
+//       <div className="grid grid-cols-1 items-center justify-items-center gap-4 md:grid-cols-2">
+//         {/* Individual preference item */}
+//         <div className="flex w-full items-center justify-between md:justify-start md:gap-4">
+//           <label htmlFor="dietType" className="font-bold text-black">Diet Type</label>
+//           <div className="relative">
+//                       <button
+//                         ref={btnDietTypeRef}
+//                         className=" inline-flex items-center rounded-lg bg-green-800 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
+//                         type="button"
+//                         onClick={handleToggleDietType}
+//                       >
+//                         {dietTypeOption.type + " "}
+//                         <svg className="ms-3 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+//                           <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4" />
+//                         </svg>
+//                       </button>
+//                       {dietType && (
+//                         <div ref={dietTypeRef} className="absolute top-11 z-10 w-32 divide-y divide-gray-100 rounded-lg bg-white shadow">
+//                           <ul className="py-2 text-sm text-gray-700" aria-labelledby="dropdownHoverButton">
+//                             {dietTypeOptions.map((option) => (
+//                               <li key={option.id} onClick={() => handleDietTypeOption(option.type, option.id)}>
+//                                 <button className="block px-4 py-2 hover:bg-gray-100">{option.type}</button>
+//                               </li>
+//                             ))}
+//                           </ul>
+//                         </div>
+//                       )}
+//                     </div>
+//                   </div>
+
+//               {/* Individual preference item */}
+//         <div className="flex w-full items-center justify-between md:justify-start md:gap-4">
+//           <label htmlFor="estimatedTime" className="font-bold text-black">Time</label>
+//           <div className="relative">
+//                       <button
+//                         ref={btnEstimatedTimeRef}
+//                         className=" inline-flex items-center rounded-lg bg-green-800 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
+//                         type="button"
+//                         onClick={handleToggleEstimatedTime}
+//                       >
+//                         {prefs.estimatedTimeOption + " "}
+//                         <svg className="ms-3 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+//                           <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4" />
+//                         </svg>
+//                       </button>
+//                       {estimatedTime && (
+//                         <div ref={estimatedTimeRef} className="absolute top-11 z-10 w-36 divide-y divide-gray-100 rounded-lg bg-white shadow">
+//                           <ul className="py-2 text-sm text-gray-700" aria-labelledby="dropdownHoverButton">
+//                             {estimatedTimeOptions.map((option) => (
+//                               <li key={option} onClick={() => handleEstimatedTimeOption(option)}>
+//                                 <button className="block px-4 py-2 hover:bg-gray-100">{option}</button>
+//                               </li>
+//                             ))}
+//                           </ul>
+//                         </div>
+//                       )}
+//                     </div>
+//                   </div>
+
+//                       {/* Individual preference item */}
+//         <div className="flex w-full items-center justify-between md:justify-start md:gap-4">
+//           <label htmlFor="allergens" className="font-bold text-black">Allergens</label>
+//           <div className="relative">
+//                       <button
+//                         ref={btnAllergensRef}
+//                         className=" inline-flex items-center rounded-lg bg-green-800 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
+//                         type="button"
+//                         onClick={handleToggleAllergens}
+//                       >
+//                         {allergensOption + " "}
+//                         <svg className="ms-3 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">   
+//                           <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4" />
+//                         </svg>
+//                       </button>
+//                       {allergens && (
+//                         <div ref={allergensRef} className="absolute top-11 z-10 w-44 divide-y divide-gray-100 rounded-lg bg-white shadow">
+
+//                         <ul className="py-2 text-sm text-gray-700" aria-labelledby="dropdownHoverButton">
+//                             <li key={1}>
+//                               <div className="flex items-center px-2">
+//                                 <input
+//                                   id="1"
+//                                   type="checkbox"
+//                                   checked={allergensSelection?.allSelected}
+//                                   onChange={(e) => handleAllergens(0, "", e.target.checked, "allSelected")}
+//                                   className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-green-800 focus:ring-2"
+//                                 />
+//                                 <label htmlFor="1" className="ms-2 text-sm font-bold text-gray-900">
+//                                   Select All
+//                                 </label>
+//                               </div>
+//                             </li>
+//                             <li key={2}>
+//                               <div className="flex items-center px-2">
+//                                 <input
+//                                   id="2"
+//                                   type="checkbox"
+//                                   checked={allergensSelection?.clear}
+//                                   onChange={(e) => handleAllergens(0, "", e.target.checked, "clear")}
+//                                   className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-green-800 focus:ring-2"
+//                                 />
+//                                 <label htmlFor="2" className="ms-2 text-sm font-bold text-gray-900">
+//                                   Clear All
+//                                 </label>
+//                               </div>
+//                             </li>
+//                             {allergensListOptions?.map((option) => (
+//                               <li key={option.allergen}>
+//                                 <div className="flex items-center px-2">
+//                                   <input
+//                                     id={String(option.allergen)}
+//                                     type="checkbox"
+//                                     checked={option.state}
+//                                     onChange={(e) => handleAllergens(option.id, option.allergen, e.target.checked, "normal")}
+//                                     className="h-4 w-4 rounded bg-gray-100 text-main-orange accent-green-800 focus:ring-2"
+//                                   />
+//                                   <label htmlFor={String(option.allergen)} className="ms-2 text-sm font-medium text-gray-900">
+//                                     {option.allergen}
+//                                   </label>
+//                                 </div>
+//                               </li>
+//                             ))}
+//                           </ul>
+//                         </div>
+//                       )}
+//                     </div>
+//                   </div>
+//               {/* The simple checkboxes can be grouped */}
+//         <div className="flex w-full flex-col items-start gap-1">
+//              <div className="flex gap-2"><input id="highProtein" type="checkbox" checked={prefs.highProtein} onChange={(e) => prefs.setHighProtein(e.target.checked)} className=" accent-green-800"/><label htmlFor="highProtein" className="text-black">High Protein</label></div>
+//              <div className="flex gap-2"><input id="lowCalorie" type="checkbox" checked={prefs.lowCalorie} onChange={(e) => prefs.setLowCalorie(e.target.checked)} className=" accent-green-800"/><label htmlFor="lowCalorie" className="text-black">Low Calorie</label></div>
+//             </div>  
+//            </div>
+//             </div>
 
 
 
