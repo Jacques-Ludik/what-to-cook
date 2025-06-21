@@ -410,9 +410,9 @@ export default function Home() {
         <meta name="description" content="Select ingredients you have available to get mouth watering recipes or just browse through delicious recipe ideas" />
         <link rel="icon" href="/whattocook-logo.png" />
       </Head>
-      <main className="flex min-h-screen flex-col items-center bg-[#faebd7] px-4 py-8">
+      <main className="flex min-h-screen flex-col items-center bg-[#faebd7] px-4 py-6">
   {/* Header: Adjusted for responsiveness */}
-  <header className="relative flex w-full max-w-7xl items-center justify-center py-3">
+  <header className="relative flex w-full max-w-7xl items-center justify-center py-2">
     {/* --- FAVOURITES BUTTON (TOP-LEFT) --- */}
     <div className="absolute left-0 top-1/2 -translate-y-1/2">
       <button
