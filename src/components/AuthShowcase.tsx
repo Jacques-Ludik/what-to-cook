@@ -9,6 +9,7 @@ export function AuthShowcase() {
   return (
     <div className="flex items-center justify-center gap-4">
       {sessionData && (
+        <div className="hidden sm:inline">
         <div className="flex items-center gap-2 text-black">
             {sessionData.user?.image && (
                 <Image 
@@ -21,9 +22,10 @@ export function AuthShowcase() {
             )}
           <span className="font-semibold">{sessionData.user?.name}</span>
         </div>
+        </div>
       )}
       <button
-        className="rounded-full bg-green-800 px-6 py-2 font-semibold text-white no-underline transition hover:bg-green-700"
+        className="rounded-full bg-green-800 px-3 md:px-6 py-2 font-semibold text-white text-sm md:text-md no-underline transition hover:bg-green-700"
         onClick={sessionData ? () => void signOut() : () => void signIn()}
       >
         {sessionData ? "Sign out" : "Sign in"}

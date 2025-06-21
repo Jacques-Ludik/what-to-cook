@@ -3,6 +3,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { api } from '~/utils/api';
 import Image from 'next/image';
+import { ShareButton } from './shareButton';
 
 interface RecipeModalProps {
     recipeId: number;
@@ -109,14 +110,31 @@ export function RecipeModal({ recipeId, isOpen, closeModal, isFavourited, toggle
                                             <h4 className="font-semibold text-lg">Instructions</h4>
                                             <p className="text-sm whitespace-pre-wrap mt-2">{recipe.instructions}</p>
                                         </div>
-                                        <div className="mt-6">
+
+                                        <div className="mt-6 flex items-center justify-between">
+                        <button type="button"
+                                                className="inline-flex justify-center rounded-md border border-transparent bg-green-100 px-4 py-2 text-sm font-medium text-green-900 hover:bg-green-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2"
+                                                onClick={closeModal}
+                                            >
+                                                Got it, thanks!
+                                            </button>
+                        
+                        <ShareButton
+                            title={recipe.title}
+                            text={`Check out this delicious recipe for ${recipe.title}!`}
+                            // === THE KEY CHANGE IS HERE ===
+                            // Construct the URL with a query parameter instead of a path.
+                            url={`${typeof window !== 'undefined' ? window.location.origin : ''}/?recipe=${recipe.id}`}
+                        />
+                    </div>
+                                        {/* <div className="mt-6">
                                             <button type="button"
                                                 className="inline-flex justify-center rounded-md border border-transparent bg-green-100 px-4 py-2 text-sm font-medium text-green-900 hover:bg-green-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2"
                                                 onClick={closeModal}
                                             >
                                                 Got it, thanks!
                                             </button>
-                                        </div>
+                                        </div> */}
                                     </>
                                 )}
                             </Dialog.Panel>

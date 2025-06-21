@@ -16,6 +16,8 @@ import { RecipeModal } from '~/components/recipeModal'; // <-- Import the modal
 import { RecipeFeed } from "~/components/recipeFeed";
 import { useInterests } from "~/hooks/useInterests";
 import { FavouritesModal } from '~/components/favouritesModal';
+import { ScrollToTopButton } from '~/components/scrollToTopButton';
+import { useRouter } from 'next/router';
 
 // Types
  type AllergensOptions = {
@@ -67,6 +69,30 @@ const createFeedInput = (
 
 export default function Home() {
 
+  const router = useRouter(); //initialise the router
+
+  // === NEW EFFECT: Handle incoming share links ===
+    useEffect(() => {
+        // This effect runs when the component mounts and the router is ready.
+        // `router.isReady` is important for ensuring query params are available.
+        if (router.isReady) {
+            const recipeIdFromUrl = router.query.recipe;
+
+            if (typeof recipeIdFromUrl === 'string') {
+                const recipeId = parseInt(recipeIdFromUrl, 10);
+                if (!isNaN(recipeId)) {
+                    // We found a valid recipe ID in the URL.
+                    // Open the modal for that recipe.
+                    console.log(`Opening recipe modal for ID: ${recipeId} from URL.`);
+                    setViewingRecipeId(recipeId);
+                }
+            }
+        }
+    }, [router.isReady, router.query]); // Re-run if the query params change
+
+  // Step 1: Create a ref for the recommendations section
+    const recommendationsRef = useRef<HTMLHeadingElement>(null);
+
   //Hooks
   // Use the custom hook to get ingredients. It handles all the logic!
   const { ingredients, isLoading: ingredientsLoading, addIngredientToList } = useIngredients();
@@ -100,6 +126,16 @@ export default function Home() {
         const newFeedInput = createFeedInput(prefs, { selectedIds }, { favouriteIds });
         console.log("New Feed Input: ", newFeedInput);
         setStagedFeedInput(newFeedInput);
+
+        // 3. Trigger the scroll after a short delay
+        // We use a timeout to ensure the DOM has had a chance to update
+        // after the state change, making the scroll target available.
+        setTimeout(() => {
+            recommendationsRef.current?.scrollIntoView({
+                behavior: 'smooth', // Makes the scroll animated instead of an instant jump
+                block: 'start',    // Vertically aligns the element to the center of the viewport
+            });
+        }, 100); // 100ms is usually enough time
     };
 
     //Search
@@ -344,33 +380,40 @@ const handleToggleAllergens = () => {
         <meta name="description" content="Select ingredients you have available to get mouth watering recipes or just browse through delicious recipe ideas" />
         <link rel="icon" href="/whattocook-logo2.png" />
       </Head>
-      <main className="flex min-h-screen flex-col items-center bg-[#faebd7]">
-        {/* from-emerald-500 to-emerald-900   text-white     text-amber-600     #FAF9F6   #faebd7*/}
-        <header className="flex w-full items-center justify-center relative p-3">
-          {/* === FAVOURITES BUTTON (TOP-LEFT) === */}
-                    <div className="absolute top-5 left-5 z-20">
-                        <button
-                            onClick={() => setIsFavouritesModalOpen(true)}
-                            className="p-2 rounded-2xl flex gap-2 bg-green-800 text-white shadow-md hover:bg-green-700 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800"
-                            aria-label="View your favourite recipes"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                            </svg> Favourites
-                        </button>
-                    </div>
-            <div className="flex items-center gap-2">
-                <h1 className="text-xl font-extrabold tracking-tight text-black sm:text-[3rem]">
-                    What to <span className="text-green-800">Cook</span>
-                </h1>
-            </div>
-            {/* Add the AuthShowcase component to the top right */}
-            <div className="absolute top-5 right-5 z-20">
-            <AuthShowcase />
-            </div>
-        </header>
+      <main className="flex min-h-screen flex-col items-center bg-[#faebd7] px-4 py-8">
+  {/* Header: Adjusted for responsiveness */}
+  <header className="relative flex w-full max-w-7xl items-center justify-center py-3">
+    {/* --- FAVOURITES BUTTON (TOP-LEFT) --- */}
+    <div className="absolute left-0 top-1/2 -translate-y-1/2">
+      <button
+        onClick={() => setIsFavouritesModalOpen(true)}
+        className="flex items-center gap-2 rounded-lg bg-green-800 p-2 text-white shadow-md transition hover:bg-green-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800"
+        aria-label="View your favourite recipes"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+        </svg>
+        {/* Text is hidden on mobile, appears on small screens and up */}
+        <span className="hidden font-semibold sm:inline">Favourites</span>
+      </button>
+    </div>
+
+    {/* --- TITLE --- */}
+    <div className="text-center">
+      {/* Responsive font sizes */}
+      <h1 className="text-3xl font-extrabold tracking-tight text-black sm:text-4xl md:text-5xl">
+        What to <span className="text-green-800">Cook</span>
+      </h1>
+    </div>
+
+    {/* --- AUTH BUTTON (TOP-RIGHT) --- */}
+    <div className="absolute right-0 top-1/2 -translate-y-1/2">
+      {/* The AuthShowcase component itself can also be made responsive */}
+      <AuthShowcase />
+    </div>
+  </header>
         {/* --- SEARCH BAR AND RESULTS --- */}
-                <div className="relative w-full max-w-md" ref={searchContainerRef}>
+                <div className="relative mt-6 w-full max-w-lg" ref={searchContainerRef}>
                     <input
                         type="text"
                         placeholder="Search for ingredients/recipes..."
@@ -412,16 +455,15 @@ const handleToggleAllergens = () => {
                     )}
                 </div>
                 {/* --- END SEARCH BAR --- */}
-          {/* <input
-            type="text"
-            placeholder="Search for ingredients/recipes..."
-            className="mt-2 w-full max-w-md rounded-lg border border-gray-900 bg-white p-1 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-800"/>   */}
-          <div className="mt-4 flex flex-col items-center gap-2">
-            <div className="flex flex-col items-center gap-[0.3rem] border-2 border-green-900 p-4 rounded-2xl w-full max-w-[47%]">
-            <p className="text-lg text-black font-bold">
-              Ingredients
-                  </p>
-                  <div className="flex flex-wrap items-center justify-center gap-4">
+          {/* --- FILTERS CONTAINER --- */}
+  {/* This container will stack its children vertically on mobile and horizontally on larger screens */}
+  <div className="mt-8 flex w-full max-w-7xl flex-col items-center justify-center gap-6 lg:flex-row lg:items-start">
+    
+    {/* --- INGREDIENTS BOX --- */}
+    {/* On mobile, it takes full width. On large screens, it takes roughly half the width. */}
+    <div className="flex w-full flex-col gap-2 rounded-2xl border-2 border-green-900 p-4 lg:w-1/2">
+      <p className="text-center text-lg font-bold text-black">Ingredients</p>
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
                   {ingredientsLoading ? (
                         <p className="text-black">Loading ingredients...</p>
                     ) : (ingredients.map((ingredient, index) => (
@@ -430,18 +472,16 @@ const handleToggleAllergens = () => {
             </div> 
 </div>
 
-<div className="flex flex-col items-center gap-[0.3rem] border-2 border-green-900 p-4 rounded-2xl w-full max-w-[47%]">
-            <p className="text-lg text-black font-bold">
-              Preferences
-                  </p>
-                  <div className="flex flex-wrap items-start justify-center gap-5">
-                <div className="flex items-start">
-                    <div className="mr-3 flex items-center py-2">
-                      <label  htmlFor="dietType" className="text-black font-bold">
-                        Diet Type
-                      </label>
-                    </div>
-                    <div className="flex flex-col relative">
+{/* --- PREFERENCES BOX --- */}
+    {/* Same responsive width logic as the ingredients box */}
+    <div className="flex w-full flex-col gap-3 rounded-2xl border-2 border-green-900 p-4 lg:w-1/2">
+      <p className="text-center text-lg font-bold text-black">Preferences</p>
+      {/* This grid will stack items and then become a 2-column grid on medium screens */}
+      <div className="grid grid-cols-1 items-center justify-items-center gap-4 md:grid-cols-2">
+        {/* Individual preference item */}
+        <div className="flex w-full items-center justify-between md:justify-start md:gap-4">
+          <label htmlFor="dietType" className="font-bold text-black">Diet Type</label>
+          <div className="relative">
                       <button
                         ref={btnDietTypeRef}
                         className=" inline-flex items-center rounded-lg bg-green-800 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
@@ -467,13 +507,10 @@ const handleToggleAllergens = () => {
                     </div>
                   </div>
 
-              <div className="flex items-start">
-                    <div className="mr-3 flex items-center py-2">
-                      <label  htmlFor="estimatedTime" className="text-black font-bold">
-                        Estimated Time
-                      </label>
-                    </div>
-                    <div className="flex flex-col relative">
+              {/* Individual preference item */}
+        <div className="flex w-full items-center justify-between md:justify-start md:gap-4">
+          <label htmlFor="estimatedTime" className="font-bold text-black">Time</label>
+          <div className="relative">
                       <button
                         ref={btnEstimatedTimeRef}
                         className=" inline-flex items-center rounded-lg bg-green-800 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
@@ -499,13 +536,10 @@ const handleToggleAllergens = () => {
                     </div>
                   </div>
 
-                      <div className="flex items-start">
-                    <div className="mr-3 flex items-center py-2">
-                      <label  htmlFor="allergens" className="text-black font-bold">
-                        Allergens
-                      </label>
-                    </div>
-                    <div className="flex flex-col relative">
+                      {/* Individual preference item */}
+        <div className="flex w-full items-center justify-between md:justify-start md:gap-4">
+          <label htmlFor="allergens" className="font-bold text-black">Allergens</label>
+          <div className="relative">
                       <button
                         ref={btnAllergensRef}
                         className=" inline-flex items-center rounded-lg bg-green-800 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
@@ -570,19 +604,25 @@ const handleToggleAllergens = () => {
                       )}
                     </div>
                   </div>
-              <div className="flex gap-1"><input id="highProtein" type="checkbox" checked={prefs.highProtein} onChange={(e) => prefs.setHighProtein(e.target.checked)} className=" accent-green-800"/><label htmlFor="highProtein" className="  py-1 text-black">High Protein</label></div>
-              <div className="flex gap-1"><input id="lowCalorie" type="checkbox" checked={prefs.lowCalorie} onChange={(e) => prefs.setLowCalorie(e.target.checked)} className=" accent-green-800"/><label htmlFor="lowCalorie" className=" py-1 text-black">Low Calorie</label></div>
+              {/* The simple checkboxes can be grouped */}
+        <div className="flex w-full flex-col items-start gap-1 md:items-center">
+             <div className="flex gap-2"><input id="highProtein" type="checkbox" checked={prefs.highProtein} onChange={(e) => prefs.setHighProtein(e.target.checked)} className=" accent-green-800"/><label htmlFor="highProtein" className="text-black">High Protein</label></div>
+             <div className="flex gap-2"><input id="lowCalorie" type="checkbox" checked={prefs.lowCalorie} onChange={(e) => prefs.setLowCalorie(e.target.checked)} className=" accent-green-800"/><label htmlFor="lowCalorie" className="text-black">Low Calorie</label></div>
             </div>  
-           
+           </div>
+            </div>
             </div>
 
-            <button
-              className="mt-4 rounded-xl bg-green-800 px-10 py-3 font-bold text-white text-xl no-underline transition hover:bg-green-700"
+            {/* --- LET'S COOK BUTTON --- */}
+  <div className="my-8">
+    <button
+      className="rounded-xl bg-green-800 px-10 py-3 text-lg font-bold text-white no-underline shadow-lg transition hover:bg-green-700 active:scale-95 sm:text-xl"
               onClick={() => handleLetsCook()} disabled={prefs.isLoading || ingredientsLoading}> Let&apos;s Cook!</button>   
 </div>
 
-<div className="w-full max-w-6xl mt-12">
-            <h2 className="text-3xl font-bold mb-6 text-center">Recommended For You</h2>
+{/* --- RECIPE FEED --- */}
+  <div className="w-full max-w-7xl">
+    <h2 className="text-center text-3xl font-bold mb-6" ref={recommendationsRef}>Recommended For You</h2>
             {stagedFeedInput && <RecipeFeed
             // By changing the key, we tell React to unmount the old component and
           // mount a brand new one, completely resetting the infinite query state.
@@ -604,11 +644,16 @@ const handleToggleAllergens = () => {
                 <RecipeModal
                     isOpen={viewingRecipeId !== null}
                     recipeId={viewingRecipeId}
-                    closeModal={() => setViewingRecipeId(null)}
+                    closeModal={() => {
+                        setViewingRecipeId(null);
+                        // Optional: Clean up the URL when the modal is closed
+                        void router.push('/', undefined, { shallow: true });
+                    }}
                     isFavourited={favouriteIds.has(viewingRecipeId)}
                     toggleFavourite={toggleFavourite}
                 />
             )}
+            <ScrollToTopButton />
     </>
   );
 }
