@@ -495,7 +495,7 @@ export default function Home() {
   {/* The `h-full` class is important for stretching inside a grid cell if needed, though grid usually handles this. */}
   <div className="flex h-full w-full flex-col gap-2 rounded-2xl border-2 border-green-900 p-4">
     <p className="text-center text-lg font-bold text-black">Ingredients</p>
-    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2">
+    <div className="flex flex-wrap items-center justify-start gap-x-6 gap-y-2 pt-2">
       {ingredientsLoading ? (
                         <p className="text-black">Loading ingredients...</p>
                     ) : (ingredients.map((ingredient, index) => (
