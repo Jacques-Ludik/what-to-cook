@@ -408,7 +408,7 @@ export default function Home() {
       <Head>
         <title>What to Cook</title>
         <meta name="description" content="Select ingredients you have available to get mouth watering recipes or just browse through delicious recipe ideas" />
-        <link rel="icon" href="/whattocook-logo2.png" />
+        <link rel="icon" href="/whattocook-logo.png" />
       </Head>
       <main className="flex min-h-screen flex-col items-center bg-[#faebd7] px-4 py-8">
   {/* Header: Adjusted for responsiveness */}
