@@ -373,6 +373,10 @@ const handleToggleAllergens = () => {
     },[prefs.allergensIDList]);
 //---------------------------------------------------------------------------------------------------------------------------------------------------
 
+// === DERIVED STATE: Is any modal currently open? ===
+    // This variable will be true if either the favourites modal is open
+    // OR a recipe is being viewed in the recipe modal.
+    const isAnyModalOpen = isFavouritesModalOpen || viewingRecipeId !== null;
   return (
     <>
       <Head>
@@ -605,7 +609,7 @@ const handleToggleAllergens = () => {
                     </div>
                   </div>
               {/* The simple checkboxes can be grouped */}
-        <div className="flex w-full flex-col items-start gap-1 md:items-center">
+        <div className="flex w-full flex-col items-start gap-1">
              <div className="flex gap-2"><input id="highProtein" type="checkbox" checked={prefs.highProtein} onChange={(e) => prefs.setHighProtein(e.target.checked)} className=" accent-green-800"/><label htmlFor="highProtein" className="text-black">High Protein</label></div>
              <div className="flex gap-2"><input id="lowCalorie" type="checkbox" checked={prefs.lowCalorie} onChange={(e) => prefs.setLowCalorie(e.target.checked)} className=" accent-green-800"/><label htmlFor="lowCalorie" className="text-black">Low Calorie</label></div>
             </div>  
@@ -653,7 +657,7 @@ const handleToggleAllergens = () => {
                     toggleFavourite={toggleFavourite}
                 />
             )}
-            <ScrollToTopButton />
+            <ScrollToTopButton isExternallyHidden={isAnyModalOpen} />
     </>
   );
 }
