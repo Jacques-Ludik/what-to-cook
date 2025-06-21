@@ -4,6 +4,7 @@ import { Fragment } from 'react';
 import { api } from '~/utils/api';
 import Image from 'next/image';
 import { ShareButton } from './shareButton';
+import { RecipeModalSkeleton } from './recipeModalSkeleton';
 
 interface RecipeModalProps {
     recipeId: number;
@@ -41,8 +42,20 @@ export function RecipeModal({ recipeId, isOpen, closeModal, isFavourited, toggle
                             leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95"
                         >
                             <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                                {isLoading && <p>Loading recipe...</p>}
-                                {error && <p>Error: {error.message}</p>}
+                                
+
+                                {isLoading && <RecipeModalSkeleton />}
+
+                                {error && (
+                                    <div className="text-center">
+                                        <h3 className="text-lg font-medium text-red-700">Oops! Something went wrong.</h3>
+                                        <p className="mt-2 text-sm text-gray-500">{error.message}</p>
+                                        <button onClick={closeModal} className="mt-4 ...">Close</button>
+                                    </div>
+                                )}
+                                
+                                {/* {isLoading && <p>Loading recipe...</p>}
+                                {error && <p>Error: {error.message}</p>} */}
                                 {recipe && (
                                     <>
                                         <Dialog.Title as="h3" className="text-2xl font-bold flex leading-6 justify-between text-gray-900">

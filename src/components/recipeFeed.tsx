@@ -4,6 +4,7 @@ import { use, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "~/utils/api";
 import Image from "next/image";
 import { useQueryClient } from '@tanstack/react-query';
+import { RecipeFeedSkeleton } from "./recipeFeedSkeleton";
 
 // Define the shape of the input for our query
 interface RecipeFeedInput {
@@ -57,30 +58,7 @@ function RecipeCard({ recipe, onClick }: RecipeCardProps) {
         </button>
     )
 }
-// function RecipeCard({ recipe, onClick }: RecipeCardProps) {
-//     // This would be your styled recipe card component
-//     return (
-//         <div className="border rounded-lg shadow-lg overflow-hidden">
-//             <Image
-//                 src={recipe.imageUrl ?? '/placeholder.png'}
-//                 alt={recipe.title}
-//                 className="w-full h-48 object-cover"
-//                 width={400}
-//                 height={192}
-//                 objectFit="cover"
-//             />
-//             {/* <Image src={recipe.imageUrl ?? } alt={recipe.title} className="w-full h-48 object-cover" height={48} width={60}/> */}
-//             <div className="p-4">
-//                 <h3 className="font-bold text-lg truncate">{recipe.title}</h3>
-//                 <div className="flex justify-between text-sm mt-2 text-gray-600">
-//                     <span>Protein: {recipe.protein ?? 'N/A'}g</span>
-//                     <span>Calories: {recipe.calorie ?? 'N/A'}</span>
-//                 </div>
-//                 {/* Add Favourite and OnClick handlers here */}
-//             </div>
-//         </div>
-//     )
-// }
+
 
 
 export function RecipeFeed({ input, onRecipeClick }: { input: RecipeFeedInput; onRecipeClick: (recipeId: number) => void; }) {
@@ -154,7 +132,10 @@ export function RecipeFeed({ input, onRecipeClick }: { input: RecipeFeedInput; o
 
 
   // Render logic remains largely the same, but it renders from `allRecipes`
-  if (isLoading) return <div className="text-center p-4">Loading recipes...</div>;
+  // If the query is in its very initial loading state, show the skeleton.
+    if (isLoading) {
+        return <RecipeFeedSkeleton />;
+    }
   if (isError) return <div className="text-center p-4 text-red-500">Failed to load recipes.</div>;
   // We use `data` here to check if the first fetch returned nothing
   // if (!isLoading && !data?.pages.flatMap(p => p.recipes).length) {

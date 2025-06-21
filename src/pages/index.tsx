@@ -20,6 +20,7 @@ import { ScrollToTopButton } from '~/components/scrollToTopButton';
 import { useRouter } from 'next/router';
 import { Dropdown, type DropdownOption } from '~/components/ui/dropDown';
 import { MultiSelectDropdown } from '~/components/ui/multiSelectDropDown';
+import { IngredientsSkeleton } from '~/components/ingredientsSkeleton';
 
 // Types
  type AllergensOptions = {
@@ -497,7 +498,7 @@ export default function Home() {
     <p className="text-center text-lg font-bold text-black">Ingredients</p>
     <div className="flex flex-wrap items-center justify-start gap-x-6 gap-y-2 pt-2">
       {ingredientsLoading ? (
-                        <p className="text-black">Loading ingredients...</p>
+                        <IngredientsSkeleton />
                     ) : (ingredients.map((ingredient, index) => (
                       <div className="flex gap-1" key={index}><input type="checkbox" id={"Ingredient"+String(index)} checked={selectedIds.has(ingredient.id)} onChange={() => toggleIngredient(ingredient.id)} className="accent-green-800"/><label htmlFor={"Ingredient"+String(index)} className=" text-black">{ingredient.name}</label></div>
                     )))}
