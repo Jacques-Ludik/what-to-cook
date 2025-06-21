@@ -3,6 +3,7 @@ import { useInView } from "react-intersection-observer";
 import { use, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "~/utils/api";
 import Image from "next/image";
+import { useQueryClient } from '@tanstack/react-query';
 
 // Define the shape of the input for our query
 interface RecipeFeedInput {
@@ -85,6 +86,14 @@ function RecipeCard({ recipe, onClick }: RecipeCardProps) {
 export function RecipeFeed({ input, onRecipeClick }: { input: RecipeFeedInput; onRecipeClick: (recipeId: number) => void; }) {
   const { ref, inView } = useInView();
 
+  const queryClient = useQueryClient(); // Get the query client instance
+
+    // We use a ref to track the last time we manually refetched on focus
+    // to prevent refetching multiple times if the user focuses the window rapidly.
+    const lastFocusTime = useRef(0);
+    const staleTime = 1000 * 60 * 30; // 1/2 hour in milliseconds
+    const queryInput = { ...input, limit: 9 };
+
   const {
     data,
     fetchNextPage,
@@ -92,25 +101,57 @@ export function RecipeFeed({ input, onRecipeClick }: { input: RecipeFeedInput; o
     isLoading,
     isFetchingNextPage,
     isError,
-    //refetch
+    //refetch, // We need the refetch function from the hook
+    isStale, // We can get the staleness state
   } = api.recipe.getRecipeFeed.useInfiniteQuery(
-    {
-      ...input,
-      limit: 9,},
+    queryInput,
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
-      // === THE FIX ===
-      // Tell React Query to consider the data fresh for 5 minutes.
-      // It will not refetch on window focus or re-mount during this time.
-      staleTime: 1000 * 60 * 60, // 1 hour in milliseconds
+      staleTime: staleTime,
+      // Give us manual control over refetching behavior
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      //refetchOnReconnect: false,
     },
   );
 
   useEffect(() => {
-    if (inView && hasNextPage) {
+    if (inView && hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+
+ // Effect for handling manual refetch on window focus
+    useEffect(() => {
+        const handleFocus = () => {
+            if (isStale && Date.now() - lastFocusTime.current > 5000) {
+                console.log("Window focused and data is stale. Resetting query.");
+                lastFocusTime.current = Date.now();
+
+                // === THE CORRECT FIX for older tRPC versions ===
+                // Manually construct the query key array.
+                // It's an array where the first element is the procedure path (as an array of strings),
+                // and the second element is an object with the input and the query type.
+                const queryKey = [
+                    ['recipe', 'getRecipeFeed'], // The path to your tRPC procedure
+                    {
+                        input: queryInput,      // The exact same input object used in the hook
+                        type: 'infinite',       // The type of query
+                    },
+                ];
+                
+                // Reset the query using the manually constructed key.
+                void queryClient.resetQueries({ queryKey });
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [isStale, queryClient, queryInput]); // queryInput is now a stable dependency
+
 
   // Render logic remains largely the same, but it renders from `allRecipes`
   if (isLoading) return <div className="text-center p-4">Loading recipes...</div>;

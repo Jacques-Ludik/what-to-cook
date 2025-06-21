@@ -22,7 +22,7 @@ export function useIngredients() {
       // === THE FIX ===
       // Tell React Query to consider the data fresh for 5 minutes.
       // It will not refetch on window focus or re-mount during this time.
-      staleTime: 1000 * 60 * 60, // 1 hour in milliseconds 
+      staleTime: 1000 * 60 * 30, // 1/2 hour in milliseconds 
   });
 
   // Query for anonymous users. It's enabled only when we have the input data.
@@ -32,7 +32,7 @@ export function useIngredients() {
       // === THE FIX ===
       // Tell React Query to consider the data fresh for 5 minutes.
       // It will not refetch on window focus or re-mount during this time.
-      staleTime: 1000 * 60 * 60, // 1 hour in milliseconds
+      staleTime: 1000 * 60 * 30, // 1/2 hour in milliseconds
      }
   );
 

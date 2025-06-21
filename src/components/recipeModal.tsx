@@ -18,7 +18,7 @@ export function RecipeModal({ recipeId, isOpen, closeModal, isFavourited, toggle
         { id: recipeId },
         {
             enabled: isOpen, // Only fetch the data when the modal is open
-            staleTime: 1000 * 60 * 60, // Cache for 1 hour
+            staleTime: 1000 * 60 * 30, // Cache for 1/2 hour
         }
     );
 
