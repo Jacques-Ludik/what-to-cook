@@ -16,6 +16,7 @@ excludedAllergenIds?: number[];
 interestRecipeIds?: Record<string, number>;
 ingredientIds?: number[];
   favouriteRecipeIds?: number[];
+  seed: number;
 }
 
 // Define the shape of a single recipe for clarity

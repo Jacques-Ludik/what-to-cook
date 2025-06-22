@@ -499,12 +499,13 @@ getAnonymousTopIngredients: publicProcedure
         favouriteRecipeIds: z.array(z.number()).optional(),
         interestRecipeIds: z.record(z.number()).optional(), // { recipeId: count }
         ingredientIds: z.array(z.number()).optional(),
-        excludedRecipeIds: z.array(z.number()).optional(),
+        seed: z.number(),
+        //excludedRecipeIds: z.array(z.number()).optional(),
       })
     )
     .query(async ({ ctx, input }) => {
             const limit = input.limit ?? 9;
-            const { cursor } = input;
+            const { cursor, seed } = input;
             
             const interestRecipeIds = Object.keys(input.interestRecipeIds ?? {}).map(Number);
             // const allPreviouslySeenIds = [ // Consolidate all known recipe IDs
@@ -516,10 +517,16 @@ getAnonymousTopIngredients: publicProcedure
       const allExcludedIds = [
           ...(input.favouriteRecipeIds ?? []),
           ...interestRecipeIds,
-          ...(input.excludedRecipeIds ?? []), // <-- Add previously fetched IDs
+         // ...(input.excludedRecipeIds ?? []), // <-- Add previously fetched IDs
       ];
 
-            const recipes = await ctx.db.$queryRaw<
+            // We use a transaction to ensure setseed() is scoped to this query
+      const recipes = await ctx.db.$transaction(async (tx) => {
+        // Set the seed for the random number generator for this transaction
+        await tx.$executeRaw`SELECT setseed(${seed})`;
+
+        return tx.$queryRaw<
+            // const recipes = await ctx.db.$queryRaw<
                 { id: number; title: string; imageUrl: string; protein: number; calorie: number; relevance_score: number; }[]
             >(Prisma.sql`
                 WITH UserTaste AS (
@@ -583,6 +590,8 @@ getAnonymousTopIngredients: publicProcedure
                             SELECT 1 FROM "RecipeAllergens" ra 
                             WHERE ra."recipeId" = r.id AND ra."allergenId" IN (${safeJoin(input.excludedAllergenIds)})
                         )
+                        -- IMPROVEMENT: Strict Diet Type Filter
+                        AND (${input.dietTypeId && input.dietTypeId !== 1 ? Prisma.sql`r."dietTypeId" = ${input.dietTypeId}` : Prisma.sql`1=1`})
                         -- Exclude recipes the user has already favourited or shown interest in
                         AND r.id NOT IN (${safeJoin(allExcludedIds)})
                 )
@@ -594,6 +603,7 @@ getAnonymousTopIngredients: publicProcedure
                     relevance_score DESC, id DESC
                 LIMIT ${limit}
             `);
+      });
 
             // ... (nextCursor logic remains the same)
             let nextCursor: typeof cursor | undefined = undefined;

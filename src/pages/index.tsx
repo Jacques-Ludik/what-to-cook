@@ -57,7 +57,8 @@ type Preferences = {
 const createFeedInput = (
     prefs: Preferences,
     ingredients: { selectedIds: Iterable<number> | ArrayLike<number>; },
-    favourites: { favouriteIds: Iterable<number> | ArrayLike<number>; }
+    favourites: { favouriteIds: Iterable<number> | ArrayLike<number>; },
+    seed: number
 ) => {
     return {
         dietTypeId: prefs.dietTypeId,
@@ -67,6 +68,7 @@ const createFeedInput = (
         excludedAllergenIds: prefs.allergensIDList,
         favouriteRecipeIds: Array.from(favourites.favouriteIds),
         ingredientIds: Array.from(ingredients.selectedIds),
+        seed: seed
     };
 };
 
@@ -109,6 +111,8 @@ export default function Home() {
   // === The "Staged" Input State ===
     // This state holds the input that is sent to the query.
     // It's ONLY updated when the "Let's Cook" button is clicked.
+    // We store the seed in state. It only changes when a new search is initiated.
+    const [searchSeed, setSearchSeed] = useState(() => Math.random());
     type FeedInput = ReturnType<typeof createFeedInput>;
     const [stagedFeedInput, setStagedFeedInput] = useState<FeedInput | null>(null);
 
@@ -116,7 +120,7 @@ export default function Home() {
     // It sets the initial state for the recipe feed.
     useEffect(() => {
         if (!prefs.isLoading && stagedFeedInput === null) {
-            setStagedFeedInput(createFeedInput(prefs, { selectedIds }, { favouriteIds }));
+            setStagedFeedInput(createFeedInput(prefs, { selectedIds }, { favouriteIds }, searchSeed));
         }
     }, [prefs.isLoading]);
 
@@ -125,8 +129,12 @@ export default function Home() {
         prefs.savePreferencesToDb();
         saveSelection();
 
+        // Generate a NEW seed for the new search
+        const newSeed = Math.random();
+        setSearchSeed(newSeed);
+
         // 2. Update the staged input to trigger a new feed fetch
-        const newFeedInput = createFeedInput(prefs, { selectedIds }, { favouriteIds });
+        const newFeedInput = createFeedInput(prefs, { selectedIds }, { favouriteIds }, newSeed);
         console.log("New Feed Input: ", newFeedInput);
         setStagedFeedInput(newFeedInput);
 
@@ -566,7 +574,7 @@ export default function Home() {
             {stagedFeedInput && <RecipeFeed
             // By changing the key, we tell React to unmount the old component and
           // mount a brand new one, completely resetting the infinite query state.
-          key={JSON.stringify(stagedFeedInput)}
+          key={`${JSON.stringify(stagedFeedInput)}-${searchSeed}`}
           input={stagedFeedInput}
           onRecipeClick={openRecipeModal}
             />}
