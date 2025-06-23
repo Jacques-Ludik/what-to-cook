@@ -1,29 +1,43 @@
 // src/hooks/useModalRouter.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'; // <-- Add useRef
 import { useRouter } from 'next/router';
-
-// This is a helper to check deep equality for query objects, preventing unnecessary pushes.
 import isEqual from 'lodash.isequal';
 
 export function useModalRouter<T extends string | number | boolean>(
     queryParam: string
 ) {
     const router = useRouter();
-    const [isReady, setIsReady] = useState(false);
     const [internalState, setInternalState] = useState<T | null>(null);
+    
+    // This ref helps us track if we have already performed the initial "deep link" fix.
+    const hasPerformedInitialFix = useRef(false);
 
-    // This effect's only job is to sync our React state FROM the URL.
-    // The URL is the single source of truth.
+    // This effect SYNCS OUR STATE from the URL. It's the "reader".
     useEffect(() => {
-        // Wait until the Next.js router is fully ready.
         if (!router.isReady) return;
 
         const urlValue = router.query[queryParam] as string | undefined;
 
+        // --- THE "DOUBLE PUSH" TRICK ---
+        // This block runs only on the very first load if the user landed on a deep link.
+        if (urlValue && !hasPerformedInitialFix.current) {
+            hasPerformedInitialFix.current = true;
+            
+            // 1. Silently replace the current history entry with the base URL
+            void router.replace('/', undefined, { shallow: true });
+
+            // 2. Immediately push the modal state back on top.
+            // We use a small timeout to ensure the `replace` has registered.
+            setTimeout(() => {
+                void router.push(`/?${queryParam}=${urlValue}`, undefined, { shallow: true });
+            }, 50); // A tiny delay is usually sufficient
+
+            return; // Exit early, the next route change will set the state correctly.
+        }
+        
+        // The normal state-syncing logic
         let newState: T | null = null;
         if (urlValue) {
-            // Attempt to convert to number if possible, otherwise use as string.
-            // This makes it work for both `recipe=123` and `show_favourites=true`.
             const numericValue = Number(urlValue);
             if (!isNaN(numericValue)) {
                 newState = numericValue as T;
@@ -33,39 +47,106 @@ export function useModalRouter<T extends string | number | boolean>(
                 newState = urlValue as T;
             }
         }
-
         setInternalState(newState);
-        setIsReady(true);
+
     }, [router.isReady, router.query, queryParam]);
 
-    // This function is what our components will call to open/close the modal.
-    // It works by programmatically changing the URL.
+    // This function CHANGES THE URL. It's the "writer".
     const setModalState = useCallback((value: T | null) => {
         const currentQuery = { ...router.query };
         const newQuery = { ...router.query };
 
         if (value !== null) {
-            // We want to OPEN the modal. Add the param to the URL.
             newQuery[queryParam] = String(value);
         } else {
-            // We want to CLOSE the modal. Remove the param from the URL.
             delete newQuery[queryParam];
         }
 
-        // Only push to history if the query has actually changed.
-        // This prevents redundant pushes and history stack clutter.
         if (!isEqual(currentQuery, newQuery)) {
+            // Use `push` to add/remove from history, which enables the back button.
             void router.push({ query: newQuery }, undefined, { shallow: true });
         }
     }, [router, queryParam]);
 
-    // Don't return the state until the hook has had a chance to sync with the URL.
-    const finalState = isReady ? internalState : null;
-
-    return [finalState, setModalState] as const;
+    return [internalState, setModalState] as const;
 }
 
 
+
+
+// old code
+// // src/hooks/useModalRouter.ts
+// import { useState, useEffect, useCallback } from 'react';
+// import { useRouter } from 'next/router';
+
+// // This is a helper to check deep equality for query objects, preventing unnecessary pushes.
+// import isEqual from 'lodash.isequal';
+
+// export function useModalRouter<T extends string | number | boolean>(
+//     queryParam: string
+// ) {
+//     const router = useRouter();
+//     const [isReady, setIsReady] = useState(false);
+//     const [internalState, setInternalState] = useState<T | null>(null);
+
+//     // This effect's only job is to sync our React state FROM the URL.
+//     // The URL is the single source of truth.
+//     useEffect(() => {
+//         // Wait until the Next.js router is fully ready.
+//         if (!router.isReady) return;
+
+//         const urlValue = router.query[queryParam] as string | undefined;
+
+//         let newState: T | null = null;
+//         if (urlValue) {
+//             // Attempt to convert to number if possible, otherwise use as string.
+//             // This makes it work for both `recipe=123` and `show_favourites=true`.
+//             const numericValue = Number(urlValue);
+//             if (!isNaN(numericValue)) {
+//                 newState = numericValue as T;
+//             } else if (urlValue === 'true') {
+//                 newState = true as T;
+//             } else {
+//                 newState = urlValue as T;
+//             }
+//         }
+
+//         setInternalState(newState);
+//         setIsReady(true);
+//     }, [router.isReady, router.query, queryParam]);
+
+//     // This function is what our components will call to open/close the modal.
+//     // It works by programmatically changing the URL.
+//     const setModalState = useCallback((value: T | null) => {
+//         const currentQuery = { ...router.query };
+//         const newQuery = { ...router.query };
+
+//         if (value !== null) {
+//             // We want to OPEN the modal. Add the param to the URL.
+//             newQuery[queryParam] = String(value);
+//         } else {
+//             // We want to CLOSE the modal. Remove the param from the URL.
+//             delete newQuery[queryParam];
+//         }
+
+//         // Only push to history if the query has actually changed.
+//         // This prevents redundant pushes and history stack clutter.
+//         if (!isEqual(currentQuery, newQuery)) {
+//             void router.push({ query: newQuery }, undefined, { shallow: true });
+//         }
+//     }, [router, queryParam]);
+
+//     // Don't return the state until the hook has had a chance to sync with the URL.
+//     const finalState = isReady ? internalState : null;
+
+//     return [finalState, setModalState] as const;
+// }
+
+
+
+
+
+// old old code
 // // src/hooks/useModalRouter.ts
 // import { useState, useEffect, useCallback } from 'react';
 // import { useRouter } from 'next/router';
