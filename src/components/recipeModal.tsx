@@ -59,7 +59,7 @@ export function RecipeModal({ recipeId, isOpen, closeModal, isFavourited, toggle
                                 {error && <p>Error: {error.message}</p>} */}
                                 {recipe && (
                                     <>
-                                        <Dialog.Title as="h3" className="text-2xl font-bold flex leading-6 justify-between text-gray-900">
+                                        <Dialog.Title as="h3" className="text-2xl font-bold flex leading-6 justify-between text-gray-900 items-center">
                                             {/* A CLEAR, DEDICATED CLOSE BUTTON AT THE TOP */}
         <button onClick={closeModal} className="p-2 rounded-full hover:bg-gray-200">
             <FiArrowLeft className="h-6 w-6 text-gray-700" />
