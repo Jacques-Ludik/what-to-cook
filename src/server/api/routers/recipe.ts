@@ -9,6 +9,7 @@ import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
+  adminProcedure
 } from "~/server/api/trpc";
 
 // Helper function to safely handle empty arrays for Prisma.join
@@ -836,5 +837,110 @@ getAnonymousTopIngredients: publicProcedure
             const orderedRecipes = input.ids.map(id => recipeMap.get(id)).filter(Boolean);
             
             return orderedRecipes;
+        }),
+
+
+
+        //----------------------------For the Maintanence page-------------------------------
+        // QUERY: Get a single recipe with all data needed for editing
+    getFullRecipeForEdit: adminProcedure // Or protectedProcedure if it's admin-only
+        .input(z.object({ id: z.number() }))
+        .query(async ({ ctx, input }) => {
+            const recipe = await ctx.db.recipe.findUnique({
+                where: { id: input.id },
+                include: {
+                    ingredients: {
+                        select: {
+                            ingredientId: true,
+                            measure: true,
+                            ingredient: {
+                                select: { name: true }
+                            }
+                        }
+                    },
+                    allergens: {
+                        select: { allergenId: true }
+                    }
+                }
+            });
+
+            if (!recipe) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Recipe not found" });
+            }
+            return recipe;
+        }),
+
+    // MUTATION: Update a recipe with new data
+    updateRecipe: adminProcedure // Or protectedProcedure
+        .input(z.object({
+            id: z.number(),
+            title: z.string(),
+            // imageUrl: z.string().optional(),
+            // link: z.string().optional(),
+            // category: z.string().optional(),
+            // area: z.string().optional(),
+            dietTypeId: z.number().optional(),
+            instructions: z.string().optional(),
+            estimatedTime: z.number().optional(),
+            protein: z.number().optional(),
+            calorie: z.number().optional(),
+            // We'll handle ingredients and allergens specially
+            ingredients: z.array(z.object({ ingredientId: z.number(), measure: z.string() })),
+            allergenIds: z.array(z.number()),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const { id, ingredients, allergenIds, ...recipeData } = input;
+
+            return ctx.db.$transaction(async (tx) => {
+                // 1. Update the simple fields on the Recipe model
+                await tx.recipe.update({
+                    where: { id },
+                    data: recipeData,
+                });
+
+                // 2. Update Ingredients (delete all existing and recreate)
+                await tx.recipeIngredients.deleteMany({ where: { recipeId: id } });
+                await tx.recipeIngredients.createMany({
+                    data: ingredients.map(ing => ({
+                        recipeId: id,
+                        ingredientId: ing.ingredientId,
+                        measure: ing.measure,
+                    })),
+                });
+
+                // 3. Update Allergens (delete all existing and recreate)
+                await tx.recipeAllergens.deleteMany({ where: { recipeId: id } });
+                await tx.recipeAllergens.createMany({
+                    data: allergenIds.map(allergenId => ({
+                        recipeId: id,
+                        allergenId,
+                    })),
+                });
+                
+                return { success: true };
+            });
+        }),
+    
+    // MUTATION: Delete a recipe
+    deleteRecipe: adminProcedure // Or protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ ctx, input }) => {
+            // The `onDelete: Cascade` in your schema should handle deleting
+            // all related RecipeIngredients, RecipeAllergens, etc. automatically.
+            await ctx.db.recipe.delete({
+                where: { id: input.id },
+            });
+            return { success: true };
+        }),
+
+      // MUTATION: create ingredient
+      createNewIngredient: adminProcedure
+        .input(z.object({ name: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            return ctx.db.ingredient.create({
+              data: {
+                name: input.name,
+              }
+            })
         }),
 });

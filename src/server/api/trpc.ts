@@ -104,6 +104,29 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
 
 
 
+// === NEW: Middleware for checking admin role ===
+const enforceUserIsAdmin = t.middleware(({ ctx, next }) => {
+    // We can assume the user is authenticated because we'll chain this after `protectedProcedure`
+    if (ctx.session?.user.role !== "administrator") { // Or 'administrator', case-sensitive
+        throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You do not have permission to perform this action.",
+        });
+    }
+
+    return next({
+        ctx: {
+            session: { ...ctx.session, user: ctx.session.user },
+        },
+    });
+});
+
+// === NEW: Reusable procedure for admin-only actions ===
+// This chains the authentication check and the admin check together.
+export const adminProcedure = protectedProcedure.use(enforceUserIsAdmin);
+
+
+
 
 
 

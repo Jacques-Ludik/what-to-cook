@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   createTRPCRouter,
   protectedProcedure,
+  publicProcedure,
 } from "~/server/api/trpc";
 
 export const userRouter = createTRPCRouter({
@@ -213,5 +214,19 @@ export const userRouter = createTRPCRouter({
                 },
             });
         }),
+
+
+    // updateUserRole: publicProcedure
+    //     .input(z.object({ userId: z.string() }))
+    //     .mutation(async ({ ctx, input }) => {
+    //         return ctx.db.user.update({
+    //           where: {
+    //             id: input.userId
+    //           },
+    //           data: {
+    //             role: "administrator"
+    //           }
+    //         })
+    //     }),
   
 });

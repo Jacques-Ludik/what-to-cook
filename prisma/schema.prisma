@@ -60,6 +60,7 @@ model User {
     email         String?   @unique
     emailVerified DateTime?
     image         String?
+    role          String?
     accounts      Account[]
     sessions      Session[]
     posts         Post[]
@@ -138,8 +139,8 @@ model DietType {
 model UserRecipes {
     userId    String
     recipeId  Int
-    user      User     @relation(fields: [userId], references: [id])
-    recipe    Recipe   @relation(fields: [recipeId], references: [id])
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
     createdAt DateTime @default(now())
     @@id([userId, recipeId])
 }
@@ -148,8 +149,8 @@ model UserRecipeInterests {
     userId    String
     recipeId  Int
     counter   Int
-    user      User     @relation(fields: [userId], references: [id])
-    recipe    Recipe   @relation(fields: [recipeId], references: [id])
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
     createdAt DateTime @default(now())
     @@id([userId, recipeId])
 }
@@ -157,8 +158,8 @@ model UserIngredients {
     userId      String
     ingredientId Int
     counter        Int
-    user        User       @relation(fields: [userId], references: [id])
-    ingredient  Ingredient @relation(fields: [ingredientId], references: [id])
+    user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    ingredient  Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
     @@id([userId, ingredientId])
@@ -176,8 +177,8 @@ model Allergens {
 model UserAllergens {
     userId      String
     allergenId  Int
-    user        User       @relation(fields: [userId], references: [id])
-    allergen    Allergens  @relation(fields: [allergenId], references: [id])
+    user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    allergen    Allergens  @relation(fields: [allergenId], references: [id], onDelete: Cascade)
     createdAt DateTime @default(now())
     @@id([userId, allergenId])
 }

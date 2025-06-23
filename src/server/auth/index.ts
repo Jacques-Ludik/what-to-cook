@@ -3,7 +3,7 @@ import { type DefaultSession, getServerSession, type NextAuthOptions } from "nex
 import type { GetServerSidePropsContext, NextApiRequest, NextApiResponse } from "next";
 //import DiscordProvider from "next-auth/providers/discord";
 import GoogleProvider from "next-auth/providers/google";
-
+import { type User as PrismaUser } from "@prisma/client";  //new added for user role addition
 import { db } from "~/server/db";
 //import { env } from "~/env"; // Make sure to import env if you use it
 
@@ -30,13 +30,16 @@ export const authOptions = {
   ],
   adapter: PrismaAdapter(db),
   callbacks: {
-    session: ({ session, user }) => ({
+    session: ({ session, user }) => {
+      const userWithRole = user as PrismaUser;
+      return {
       ...session,
       user: {
         ...session.user,
         id: user.id,
+        role: userWithRole.role,
       },
-    }),
+    }},
   },
 } satisfies NextAuthOptions;
 
