@@ -5,6 +5,7 @@ import { api } from '~/utils/api';
 import Image from 'next/image';
 import { ShareButton } from './shareButton';
 import { RecipeModalSkeleton } from './recipeModalSkeleton';
+import { FiArrowLeft } from 'react-icons/fi';
 
 interface RecipeModalProps {
     recipeId: number;
@@ -53,12 +54,16 @@ export function RecipeModal({ recipeId, isOpen, closeModal, isFavourited, toggle
                                         <button onClick={closeModal} className="mt-4 ...">Close</button>
                                     </div>
                                 )}
-                                
+
                                 {/* {isLoading && <p>Loading recipe...</p>}
                                 {error && <p>Error: {error.message}</p>} */}
                                 {recipe && (
                                     <>
                                         <Dialog.Title as="h3" className="text-2xl font-bold flex leading-6 justify-between text-gray-900">
+                                            {/* A CLEAR, DEDICATED CLOSE BUTTON AT THE TOP */}
+        <button onClick={closeModal} className="p-2 rounded-full hover:bg-gray-200">
+            <FiArrowLeft className="h-6 w-6 text-gray-700" />
+        </button>
                                             {recipe.title}
                                                                                     {/* === NEW & IMPROVED FAVOURITE BUTTON === */}
 <button
