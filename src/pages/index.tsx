@@ -21,6 +21,7 @@ import { useRouter } from 'next/router';
 import { Dropdown, type DropdownOption } from '~/components/ui/dropDown';
 import { MultiSelectDropdown } from '~/components/ui/multiSelectDropDown';
 import { IngredientsSkeleton } from '~/components/ingredientsSkeleton';
+import { useModalRouter } from '~/hooks/useModalRouter';
 
 // Types
  type AllergensOptions = {
@@ -178,7 +179,7 @@ export default function Home() {
 
     //Click on search results
     // === State for the Recipe Modal ===
-    const [viewingRecipeId, setViewingRecipeId] = useState<number | null>(null);
+    const [viewingRecipeId, setViewingRecipeId] = useModalRouter<number>('recipe');
 
     // ... search dropdown state and handlers ...
     const handleSearchResultClick = (result: { id: string; name: string; type: 'Recipe' | 'Ingredient' }) => {
@@ -200,12 +201,20 @@ export default function Home() {
     };
 
     //Favourites
-    const [isFavouritesModalOpen, setIsFavouritesModalOpen] = useState(false);
+    const [isFavouritesModalOpen, setIsFavouritesModalOpen] = useModalRouter<boolean>('show_favourites');
 
     // This function will now be used by BOTH the FavouritesModal and the RecipeFeed
     const openRecipeModal = (recipeId: number) => {
+        // If the favourites modal is open, close it first.
+        if(isFavouritesModalOpen) {
+            setIsFavouritesModalOpen(null);
+        }
         setViewingRecipeId(recipeId);
     };
+    // // This function will now be used by BOTH the FavouritesModal and the RecipeFeed
+    // const openRecipeModal = (recipeId: number) => {
+    //     setViewingRecipeId(recipeId);
+    // };
 
   //-----------------------------------------------------DropDowns-----------------------------------------------------------------
 
@@ -411,7 +420,8 @@ export default function Home() {
 // === DERIVED STATE: Is any modal currently open? ===
     // This variable will be true if either the favourites modal is open
     // OR a recipe is being viewed in the recipe modal.
-    const isAnyModalOpen = isFavouritesModalOpen || viewingRecipeId !== null;
+    const isAnyModalOpen = !!isFavouritesModalOpen || viewingRecipeId !== null;
+    // const isAnyModalOpen = isFavouritesModalOpen || viewingRecipeId !== null;
   return (
     <>
       <Head>
@@ -582,7 +592,23 @@ export default function Home() {
 
       </main>
       {/* === Render the Modals === */}
-            <FavouritesModal
+      <FavouritesModal
+                isOpen={!!isFavouritesModalOpen}
+                closeModal={() => setIsFavouritesModalOpen(null)}
+                favouriteIds={Array.from(favouriteIds)}
+                onRecipeClick={openRecipeModal}
+            />
+
+            {viewingRecipeId !== null && (
+                <RecipeModal
+                    isOpen={viewingRecipeId !== null}
+                    recipeId={viewingRecipeId}
+                    closeModal={() => setViewingRecipeId(null)}
+                    isFavourited={favouriteIds.has(viewingRecipeId)}
+                    toggleFavourite={toggleFavourite}
+                />
+            )}
+            {/* <FavouritesModal
                 isOpen={isFavouritesModalOpen}
                 closeModal={() => setIsFavouritesModalOpen(false)}
                 favouriteIds={Array.from(favouriteIds)}
@@ -600,7 +626,7 @@ export default function Home() {
                     isFavourited={favouriteIds.has(viewingRecipeId)}
                     toggleFavourite={toggleFavourite}
                 />
-            )}
+            )} */}
             <ScrollToTopButton isExternallyHidden={isAnyModalOpen} />
     </>
   );
