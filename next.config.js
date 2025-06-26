@@ -17,7 +17,8 @@ const config = {
         pathname: "/a/**", // This makes it more specific to user avatars
       },
       // You can add other trusted hostnames here in the future
-      new URL ('https://www.themealdb.com/**')
+      new URL ('https://www.themealdb.com/**'),
+      new URL ('https://m.ftscrt.com/static/recipe/**')
     ],
   },
 
