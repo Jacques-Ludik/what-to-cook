@@ -112,7 +112,9 @@ export function RecipeModal({ recipeId, isOpen, closeModal, isFavourited, toggle
                                             <div className="md:w-1/2">
                                                 <h4 className="font-semibold text-lg">Ingredients</h4>
                                                 <ul className="list-disc list-inside mt-2 text-sm">
-                                                    {recipe.ingredients.map((ing, i) => (
+                                                    {recipe.source === "FatSecret" ? recipe.ingredients.map((ing, i) => (
+                                                        <li key={i}>{ing.measure}</li>
+                                                    )) : recipe.ingredients.map((ing, i) => (
                                                         <li key={i}>{ing.measure} {ing.name}</li>
                                                     ))}
                                                 </ul>

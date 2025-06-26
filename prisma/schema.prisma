@@ -101,14 +101,20 @@ model Recipe {
     link      String?
     category  String?
     area      String?
+    source    String?  //from where I got the data (e.g. FatSecret)
+    recipeDescription    String?
     dietType  DietType? @relation(fields: [dietTypeId], references: [id])
     dietTypeId Int?
     allergens   RecipeAllergens[]
     ingredients  RecipeIngredients[]
     instructions String?
+    prepTime  Int?
     estimatedTime Int?
     protein Int?
+    fat     Int?
+    carb    Int?
     calorie Int?
+    microNutrients  String?
     user    UserRecipes[]
     usersInterested UserRecipeInterests[]
     createdAt DateTime @default(now())

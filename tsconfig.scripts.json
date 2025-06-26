@@ -1,0 +1,12 @@
+// tsconfig.scripts.json
+{
+  "extends": "./tsconfig.json", // Inherit all settings from your main tsconfig
+  "compilerOptions": {
+    "module": "CommonJS", // Override the module system to CommonJS, which is standard for Node.js scripts
+    "moduleResolution": "node",
+    "resolveJsonModule": true
+  },
+  "include": [
+    "scripts" // Tell it to only apply these settings to files in the 'scripts' directory
+  ]
+}

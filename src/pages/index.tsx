@@ -109,6 +109,8 @@ export default function Home() {
     const { addInterest } = useInterests();
   // const { interestData } = useInterests();
 
+
+
   // === The "Staged" Input State ===
     // This state holds the input that is sent to the query.
     // It's ONLY updated when the "Let's Cook" button is clicked.
@@ -575,7 +577,9 @@ export default function Home() {
   <div className="my-8">
     <button
       className="rounded-xl bg-green-800 px-10 py-3 text-lg font-bold text-white no-underline shadow-lg transition hover:bg-green-700 active:scale-95 sm:text-xl"
-              onClick={() => handleLetsCook()} disabled={prefs.isLoading || ingredientsLoading}> Let&apos;s Cook!</button>   
+               onClick={() => handleLetsCook()}
+              //onClick={() => handleCreateIngredients()}
+               disabled={prefs.isLoading || ingredientsLoading}> Let&apos;s Cook!</button>                  
 </div>
 
 {/* --- RECIPE FEED --- */}
