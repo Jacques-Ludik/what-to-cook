@@ -7,6 +7,24 @@
     "resolveJsonModule": true
   },
   "include": [
-    "scripts" // Tell it to only apply these settings to files in the 'scripts' directory
+    "scripts/**/*.ts" // Tell it to only apply these settings to files in the 'scripts' directory
   ]
 }
+
+
+// // tsconfig.scripts.json
+// {
+//   "extends": "./tsconfig.json",
+//   "compilerOptions": {
+//     "module": "CommonJS",
+//     "moduleResolution": "node",
+//     "resolveJsonModule": true
+//   },
+//   "ts-node": {
+//     "transpileOnly": true
+//   },
+//   "include": [
+//     "scripts/**/*.cts", // This pattern includes all .cts files in the scripts folder
+//     "scripts/**/*.ts"   // You can keep this if you have other scripts
+//   ]
+// }

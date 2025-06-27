@@ -18,7 +18,8 @@ const config = {
       },
       // You can add other trusted hostnames here in the future
       new URL ('https://www.themealdb.com/**'),
-      new URL ('https://m.ftscrt.com/static/recipe/**')
+      //new URL ('https://m.ftscrt.com/static/recipe/**'),
+      new URL ('https://storage.googleapis.com/whattocook-a1eeb.firebasestorage.app/**')
     ],
   },
 
