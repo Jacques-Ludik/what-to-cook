@@ -111,6 +111,14 @@ export default function Home() {
 
 
 
+    const updateImages = api.recipe.updateImageUrl.useMutation();
+    const handleUpdateImages = () => {
+      updateImages.mutate({id: 1112, url: "https://cdn.loveandlemons.com/wp-content/uploads/2024/03/egg-salad-recipe.jpg"});
+    }
+
+
+
+
   // === The "Staged" Input State ===
     // This state holds the input that is sent to the query.
     // It's ONLY updated when the "Let's Cook" button is clicked.
@@ -252,172 +260,6 @@ export default function Home() {
     const handleSelectAllAllergens = () => prefs.setAllergensIDList(allergenOptions.map(opt => opt.id));
     const handleClearAllAllergens = () => prefs.setAllergensIDList([]);
 
-
-
-
-
-// //old code
-//   const dietTypeRef = useRef<HTMLDivElement>(null);
-//   const btnDietTypeRef = useRef<HTMLButtonElement>(null);
-//   const [estimatedTime, setEstimatedTime] = useState(false);
-//   //const [estimatedTimeOption, setEstimatedTimeOption] = useState("30 minutes");
-//   const estimatedTimeRef = useRef<HTMLDivElement>(null);
-//   const btnEstimatedTimeRef = useRef<HTMLButtonElement>(null);
-//   const [allergens, setAllergens] = useState(false);
-//   const [allergensOption, setAllergensOption] = useState("None");
-//   const allergensRef = useRef<HTMLDivElement>(null);
-//   const btnAllergensRef = useRef<HTMLButtonElement>(null);
-// //------------------ DIET TYPE --------------------
-// const dietTypeOptions = [{ id: 1, type: 'None' }, {id:2, type: 'Pescatarian'}, {id:3, type:'Pollotarian'}, {id:4, type:'Vegetarian'}, {id:5, type:'Vegan'}, {id:6, type:'Halal'}, {id:7, type:'Keto'}];
-// const [dietType, setDietType] = useState(false);
-// const [dietTypeOption, setDietTypeOption] = useState<DietType>(dietTypeOptions.find((dietType) => dietType.id === prefs.dietTypeId) ?? { id: 1, type: 'None'});
-// const handleToggleDietType = () => {
-//     setDietType(!dietType);
-//   };
-//   const handleDietTypeOption = (option: SetStateAction<string>, id: number) => {
-//     const dietType_ =  dietTypeOptions.find((diet) => diet.id === id);
-//     if (!dietType_) return;
-//     setDietTypeOption(dietType_);
-//     //added
-//     prefs.setDietTypeId(id);
-//     setDietType(false);
-//   }
-//   useEffect(() => {
-//     const handleClickOutside = (event: MouseEvent) => {
-//       if (
-//         dietTypeRef.current &&
-//         !dietTypeRef.current.contains(event.target as Node) &&
-//         btnDietTypeRef.current &&
-//         !btnDietTypeRef.current.contains(event.target as Node)
-//       ) {
-//         setDietType(false);
-//       }
-//     };
-//     document.addEventListener("mousedown", handleClickOutside);
-//     return () => {
-//       document.removeEventListener("mousedown", handleClickOutside);
-//     };
-//   }, []);
-//   //set diettype to returned diettype from db
-//   useEffect(() =>{
-//     const dietType_ = dietTypeOptions.find((dietType) => dietType.id == prefs.dietTypeId);
-//     setDietTypeOption(dietType_ ?? { id: 1, type: 'None' });
-//   }, [prefs.dietTypeId]);
-  
-
-//   //------------------ ESTIMATED TIME --------------------
-// const estimatedTimeOptions = ['15 minutes', '30 minutes', '45 minutes', '60 minutes', '75 minutes', '90 minutes',  '120 minutes'];
-// const handleToggleEstimatedTime = () => {
-//     setEstimatedTime(!estimatedTime);
-//   };
-//   const handleEstimatedTimeOption = (option: SetStateAction<string>) => {
-//     prefs.setEstimatedTimeOption(option);
-//     setEstimatedTime(false);
-//   };
-//   useEffect(() => {
-//     const handleClickOutside = (event: MouseEvent) => {
-//       if (
-//         estimatedTimeRef.current &&
-//         !estimatedTimeRef.current.contains(event.target as Node) &&
-//         btnEstimatedTimeRef.current &&
-//         !btnEstimatedTimeRef.current.contains(event.target as Node)
-//       ) {
-//         setEstimatedTime(false);
-//       }
-//     };
-//     document.addEventListener("mousedown", handleClickOutside);
-//     return () => {
-//       document.removeEventListener("mousedown", handleClickOutside);
-//     };
-//   }, []);
-
-//   //------------------ ALLERGENS --------------------
-// const handleToggleAllergens = () => {
-//     setAllergens(!allergens);
-//   };
-//   useEffect(() => {
-//     const handleClickOutside = (event: MouseEvent) => {
-//       if (
-//         allergensRef.current &&
-//         !allergensRef.current.contains(event.target as Node) &&
-//         btnAllergensRef.current &&
-//         !btnAllergensRef.current.contains(event.target as Node)
-//       ) {
-//         setAllergens(false);
-//       }
-//     };
-//     document.addEventListener("mousedown", handleClickOutside);
-//     return () => {
-//       document.removeEventListener("mousedown", handleClickOutside);
-//     };
-//   }, []);
-
-//   const [allergensListOptions, setAllergensListOptions] = useState<AllergensOptions[]>([]);
-//   const [allergensSelection, setAllergensSelection] = useState<AllergensSelect>();
-//   const [allergensList, setAllergensList] = useState<Allergens[]>([]);
-
-//   const handleAllergens = (id: number, option: SetStateAction<string>, state: boolean, selectionAllergens: string) => {
-//     if (selectionAllergens === "allSelected") {
-//       setAllergensOption("Select All");
-//       setAllergensSelection({ allSelected: state, clear: false });
-//       const allergens_ = allergensListOptions.map((allergen) => ({
-//         id: allergen.id,
-//         allergen: allergen.allergen,
-//       }));
-//       setAllergensList(allergens_.sort((a, b) => a.id - b.id));
-//       setAllergensListOptions(allergensListOptions.map((allergen) => ({ ...allergen, state: true })));
-//       //added
-//       prefs.setAllergensIDList(allergensListOptions.map((allergen) => allergen.id));
-//     } else if (selectionAllergens === "clear") {
-//       setAllergensOption("Clear All");
-//       setAllergensSelection({ allSelected: false, clear: state });
-//       setAllergensList([]);
-//       setAllergensListOptions(allergensListOptions.map((allergen) => ({ ...allergen, state: false })));
-//       //added
-//       prefs.setAllergensIDList([]);
-//     } else if (selectionAllergens === "normal") {
-//       setAllergensOption(option);
-//       setAllergensSelection({ allSelected: false, clear: false });
-//       if (state) {
-//         const allergen_: Allergens = {
-//           id: id,
-//           allergen: String(option),
-//         };
-//         const allergensIDList_ = allergensList.map((allergen) => allergen.id);
-//         if (!allergensIDList_.includes(id)) {
-//           setAllergensList([...allergensList, allergen_]);
-//           //added
-//           prefs.setAllergensIDList([...allergensIDList_, allergen_.id]);
-//         }
-//         setAllergensListOptions(allergensListOptions.map((allergen) => (allergen.id === id ? { ...allergen, state: true } : allergen)));
-//       } else {
-//         const updatedAllergensList = allergensList.filter((allergen) => allergen.id !== id);
-//         setAllergensList(updatedAllergensList.sort((a, b) => a.id - b.id));
-//         setAllergensListOptions(allergensListOptions.map((allergen) => (allergen.id === id ? { ...allergen, state: false } : allergen)));
-//         //added
-//         prefs.setAllergensIDList(updatedAllergensList.map((allergen) => allergen.id).filter((allergen) => allergen != id));
-//       }
-//     }
-//   }
-//   useEffect(() => {
-//       //set allergens options
-//     const allergensOptions = [{ id: 1, name: 'Wheat'}, {id:2, name:'Milk'}, { id: 3, name: 'Eggs'}, { id: 4, name: 'Sulfur Dioxide'}, { id: 5, name: 'Celery'}, { id: 6, name: 'Soybeans'}, { id: 7, name: 'Fish'}, { id: 8, name: 'Tree Nuts'}, { id: 9, name: 'Mustard'}, { id: 10, name: 'Sesame'}, { id: 11, name: 'Crustacean Shellfish'}, { id: 12, name: 'Peanuts'}, { id: 13, name: 'Molluscs'}, { id: 14, name: "Lupin"}];
-//     console.log("Allergens List should be here: ", prefs.allergensIDList);
-
-//       const initialAllergensListOptions = prefs.allergensIDList.length > 0 ? allergensOptions.map((allergen, index) => ({
-//       id: index + 1,
-//       allergen: allergen.name,
-//       state: prefs.allergensIDList.includes(allergen.id),
-//     })) : allergensOptions.map((allergen, index) => ({
-//       id: index + 1,
-//       allergen: allergen.name,
-//       state: false,
-//     }));
-
-//     setAllergensListOptions(initialAllergensListOptions);
-//     setAllergensList(initialAllergensListOptions.filter((allergen) => allergen.state === true).map((allergen) => ({allergen: allergen.allergen, id: allergen.id})));
-//     },[prefs.allergensIDList]);
-// //---------------------------------------------------------------------------------------------------------------------------------------------------
 
 // === DERIVED STATE: Is any modal currently open? ===
     // This variable will be true if either the favourites modal is open

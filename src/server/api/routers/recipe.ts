@@ -591,7 +591,7 @@ getAnonymousTopIngredients: publicProcedure
                             (COALESCE((SELECT SUM(uri.counter) FROM "UserRecipeInterests" uri WHERE uri."recipeId" = r.id), 0) * 1)
                             +
                             -- SCORE COMPONENT 5: RANDOMNESS
-                            (RANDOM() * 3)
+                            (RANDOM() * 6)
                         ) as relevance_score
                     FROM "Recipe" r
                     WHERE
@@ -952,5 +952,19 @@ getAnonymousTopIngredients: publicProcedure
                 name: input.name,
               }
             })
+        }),
+
+
+
+        //update image url
+        updateImageUrl: adminProcedure.input(z.object({ id: z.number(), url: z.string()})).mutation(async ({ ctx, input }) => {
+          return ctx.db.recipe.update({
+            where: {
+              id: input.id
+            },
+            data: {
+              imageUrl: input.url
+            }
+          })
         }),
 });
