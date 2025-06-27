@@ -7,7 +7,7 @@ import { Dropdown, type DropdownOption } from '~/components/ui/dropDown';
 import { MultiSelectDropdown } from '~/components/ui/multiSelectDropDown';
 import { FiX, FiPlus } from 'react-icons/fi';
 import { ConfirmationModal } from '~/components/confirmationModal';
-
+import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 
@@ -16,7 +16,7 @@ import { useRouter } from 'next/router';
 type FallbackRecipe = {
     id: number;
     title: string;
-    // imageUrl: string | null;
+    imageUrl: string | null;
     // link: string | null;
     // category: string | null;
     // area: string | null;
@@ -316,6 +316,14 @@ const MaintenancePage: NextPage = () => {
                 {/* --- Edit Form --- */}
                 {recipeToEdit && (
                     <div className="mt-8 p-6 bg-white rounded-lg shadow space-y-6">
+                        <div className="md:w-1/2">
+                                                                        <Image
+                                                                            src={recipeToEdit.imageUrl ?? '/placeholder.png'}
+                                                                            alt={recipeToEdit.title}
+                                                                            width={600} height={450}
+                                                                            className="rounded-lg object-cover"
+                                                                        />
+                                                                    </div>
                         {/* Title */}
                         <div>
                             <label className="block font-medium text-gray-700">Title</label>
