@@ -1,5 +1,5 @@
 // src/hooks/useIngredients.ts
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { api } from "~/utils/api";
 
@@ -35,6 +35,23 @@ export function useIngredients() {
       staleTime: 1000 * 60 * 30, // 1/2 hour in milliseconds
      }
   );
+
+  // This effect's ONLY job is to set the INITIAL list of ingredients.
+  // It runs when the data from either query becomes available for the first time.
+  useEffect(() => {
+    const data = personalizedQuery.data ?? anonymousQuery.data;
+    if (data && ingredients.length === 0) { // Only set if our list is currently empty
+      // Ensure data is clean before setting
+      const cleanData = data.filter(Boolean).map(ing => ({ id: ing.id, name: ing.name }));
+      setIngredients(cleanData);
+    }
+    if (data && ingredients.length > 22) {
+      // Ensure data is clean before setting
+      const cleanData = data.filter(Boolean).map(ing => ({ id: ing.id, name: ing.name })).slice(0,22);
+      setIngredients(cleanData);
+    }
+  }, [personalizedQuery.data, anonymousQuery.data, ingredients.length]);
+
 
   // This single useEffect now handles the initial data-loading decision
   useEffect(() => {
@@ -84,6 +101,7 @@ export function useIngredients() {
         // Find the last unselected ingredient by searching from the end
         for (let i = listToModify.length - 1; i >= 0; i--) {
             if (!selectedIds.has(listToModify[i]!.id)) {
+
                 indexToRemove = i;
                 break;
             }
@@ -101,6 +119,51 @@ export function useIngredients() {
       return [ingredient, ...listToModify];
     });
   };
+
+
+//  // === THE CORRECTED FUNCTION ===
+//   const addIngredientToList = useCallback((ingredient: Ingredient, selectedIds: Set<number>) => {
+//     setIngredients(prevIngredients => {
+//       // Create a new working copy
+//       const newIngredients = [...prevIngredients];
+
+//       // If the ingredient is already in the list, move it to the front.
+//       const existingIndex = newIngredients.findIndex(i => i.id === ingredient.id);
+//       if (existingIndex > -1) {
+//         // Remove it from its current position
+//         newIngredients.splice(existingIndex, 1);
+//       } 
+//       // If the list is already at or over the limit (and the new item wasn't already in it)
+//       else if (newIngredients.length >= 18) {
+//         let indexToRemove = -1;
+//         // Find the last unselected ingredient by searching from the end
+//         for (let i = newIngredients.length - 1; i >= 0; i--) {
+//           if (!selectedIds.has(newIngredients[i]!.id)) {
+//             indexToRemove = i;
+//             break;
+//           }
+//         }
+//         // If all are selected, just remove the very last one
+//         if (indexToRemove === -1) {
+//           indexToRemove = newIngredients.length - 1;
+//         }
+//         // Remove the determined ingredient
+//         newIngredients.splice(indexToRemove, 1);
+//       }
+
+//       // Add the new ingredient to the very beginning of the list
+//       return [ingredient, ...newIngredients];
+//     });
+//   }, []); // Empty dependency array as it uses the functional form of setState
+
+
+
+
+
+
+
+
+
   // const addIngredientToList = (ingredient: Ingredient) => {
   //   setIngredients(prevIngredients => {
   //     // Check if the ingredient is already in the list to avoid duplicates
