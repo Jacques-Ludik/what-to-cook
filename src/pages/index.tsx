@@ -24,33 +24,13 @@ import { IngredientsSkeleton } from '~/components/ingredientsSkeleton';
 import { useModalRouter } from '~/hooks/useModalRouter';
 
 // Types
- type AllergensOptions = {
-    id: number;
-    allergen: string;
-    state: boolean;
-  };
-
-  type Allergens = {
-    id: number;
-    allergen: string;
-  };
-
-  type AllergensSelect = {
-    allSelected: boolean;
-    clear: boolean;
-  };
-
-  type DietType = {
-    id: number;
-    type: string;
-  };
-
 // Define a type for preferences to avoid 'any'
 type Preferences = {
     dietTypeId: number;
     estimatedTimeOption: string;
     highProtein: boolean;
     lowCalorie: boolean;
+    strictSearch: boolean;
     allergensIDList: number[];
 };
 
@@ -66,6 +46,7 @@ const createFeedInput = (
         estimatedTime: parseInt(prefs.estimatedTimeOption.split(" ")[0] ?? "0"),
         highProtein: prefs.highProtein,
         lowCalorie: prefs.lowCalorie,
+        strictSearch: prefs.strictSearch,
         excludedAllergenIds: prefs.allergensIDList,
         favouriteRecipeIds: Array.from(favourites.favouriteIds),
         ingredientIds: Array.from(ingredients.selectedIds),
@@ -111,10 +92,10 @@ export default function Home() {
 
 
 
-    const updateImages = api.recipe.updateImageUrl.useMutation();
-    const handleUpdateImages = () => {
-      updateImages.mutate({id: 1112, url: "https://cdn.loveandlemons.com/wp-content/uploads/2024/03/egg-salad-recipe.jpg"});
-    }
+    // const updateImages = api.recipe.updateImageUrl.useMutation();
+    // const handleUpdateImages = () => {
+    //   updateImages.mutate({id: 1112, url: "https://cdn.loveandlemons.com/wp-content/uploads/2024/03/egg-salad-recipe.jpg"});
+    // }
 
 
 
@@ -322,7 +303,7 @@ export default function Home() {
 
                             {!isSearchLoading && searchResults && searchResults.length > 0 && (
                                 <ul className="max-h-60 overflow-auto">
-                                    {searchResults.map((result) => (
+                                    {searchResults.filter(r => r !== undefined).map((result) => (
                                         <li
                                             key={result.id}
                                             className="cursor-pointer p-2 hover:bg-green-100"
@@ -365,6 +346,14 @@ export default function Home() {
                       <div className="flex gap-1" key={index}><input type="checkbox" id={"Ingredient"+String(index)} checked={selectedIds.has(ingredient.id)} onChange={() => toggleIngredient(ingredient.id)} className="accent-green-800"/><label htmlFor={"Ingredient"+String(index)} className=" text-black">{ingredient.name}</label></div>
                     )))}
     </div>
+
+    {!ingredientsLoading &&
+    (<div className="flex items-center gap-4 border-t border-green-900/20 pt-4 sm:justify-center sm:gap-8">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input id="strictSelection" type="checkbox" checked={prefs.strictSearch} onChange={(e) => prefs.setStrictSearch(e.target.checked)} className="h-4 w-4 accent-green-800" />
+          <span className="text-black">Strict Selection</span>
+        </label>
+    </div>)}
   </div>
 
   {/* === REFACTORED PREFERENCES BOX === */}

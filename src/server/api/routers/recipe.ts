@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { create } from "domain";
 import { link } from "fs";
+import _ from "lodash";
 import { Arapey } from "next/font/google";
 import { z } from "zod";
 
@@ -505,6 +506,7 @@ getAnonymousTopIngredients: publicProcedure
         estimatedTime: z.number().optional(),
         highProtein: z.boolean().optional(),
         lowCalorie: z.boolean().optional(),
+        strictSearch: z.boolean().optional(),
         excludedAllergenIds: z.array(z.number()).optional(),
         // User Taste Profile (from DB or localStorage)
         favouriteRecipeIds: z.array(z.number()).optional(),
@@ -530,6 +532,8 @@ getAnonymousTopIngredients: publicProcedure
           ...interestRecipeIds,
          // ...(input.excludedRecipeIds ?? []), // <-- Add previously fetched IDs
       ];
+
+      const selectedIngredientCount = input.ingredientIds?.length ?? 0;
 
             // We use a transaction to ensure setseed() is scoped to this query
       const recipes = await ctx.db.$transaction(async (tx) => {
@@ -559,40 +563,78 @@ getAnonymousTopIngredients: publicProcedure
                         r.protein,
                         r.calorie,
                         (
-                            -- SCORE COMPONENT 1: STRICT PREFERENCE MATCHING
-                            CASE WHEN
-                                ${input.estimatedTime ? Prisma.sql`r."estimatedTime" <= ${input.estimatedTime}` : Prisma.sql`1=1`}
-                            THEN 200 ELSE 0 END -- Lowered base score, as diet is now separat
-                            +
-                            CASE WHEN
-                                ${input.highProtein ? Prisma.sql`r.protein >= 80` : Prisma.sql`1=1`} -- Adjusted threshold
-                            THEN 300 ELSE 0 END -- Lowered base score, as diet is now separat
-                            +
-                            CASE WHEN
-                                ${input.lowCalorie ? Prisma.sql`r.calorie <= 700` : Prisma.sql`1=1`} -- Adjusted threshold
-                            THEN 200 ELSE 0 END -- Lowered base score, as diet is now separat
-                            +
-                            -- IMPROVEMENT 2: HEAVY DIET TYPE WEIGHTING (if not 'None')
-                            CASE WHEN 
-                                ${input.dietTypeId && input.dietTypeId !== 1 ? Prisma.sql`r."dietTypeId" = ${input.dietTypeId}` : Prisma.sql`1=0`}
-                            THEN 1200 ELSE 0 END
-                            +
-                            -- SCORE COMPONENT 2: TASTE PROFILE SIMILARITY
-                            (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (SELECT "ingredientId" FROM UserTaste)) * 15
-                            +
-                            (CASE WHEN r.category IN (SELECT category FROM UserTaste) THEN 10 ELSE 0 END)
-                            +
-                            -- SCORE COMPONENT 3: SELECTED INGREDIENTS MATCH
-                            (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (${safeJoin(input.ingredientIds)})) * 50
-                            +
-                            -- SCORE COMPONENT 4: GLOBAL POPULARITY
-                            COALESCE((SELECT COUNT(*) FROM "UserRecipes" ur WHERE ur."recipeId" = r.id), 0) * 2
-                            +
-                            (COALESCE((SELECT SUM(uri.counter) FROM "UserRecipeInterests" uri WHERE uri."recipeId" = r.id), 0) * 1)
-                            +
-                            -- SCORE COMPONENT 5: RANDOMNESS
-                            (RANDOM() * 6)
-                        ) as relevance_score
+                        -- === NEW SCORING LOGIC ===
+
+                        -- 1. HEAVY DIET TYPE WEIGHTING (if not 'None')
+                        CASE WHEN 
+                            ${input.dietTypeId && input.dietTypeId !== 1 ? Prisma.sql`r."dietTypeId" = ${input.dietTypeId}` : Prisma.sql`1=0`}
+                        THEN 1000 ELSE 0 END
+                        +
+                        -- 2. RANGED PREFERENCE SCORES (each weighted up to 100 points)
+                        -- Estimated Time Score:
+                        (CASE WHEN ${input.estimatedTime ? Prisma.sql`r."estimatedTime" IS NOT NULL` : Prisma.sql`1=0`}
+                              THEN 100.0 / (1 + ABS(${input.estimatedTime ?? 0} - r."estimatedTime"))
+                              ELSE 0
+                         END)
+                        +
+                        -- Protein Score (direct value, capped at 100 for balance)
+                        LEAST(COALESCE(r.protein, 0), 100)
+                        +
+                        -- Calorie Score (inverted and scaled, capped at 100)
+                        GREATEST(0, 100 - (COALESCE(r.calorie, 0) / 10.0)) -- e.g. 500 cal = 50 pts, 1000 cal = 0 pts
+                        +
+                        -- 3. TASTE PROFILE SIMILARITY (same as before)
+                        (SELECT COUNT(*) FROM "RecipeIngredients" ri_taste WHERE ri_taste."recipeId" = r.id AND ri_taste."ingredientId" IN (SELECT "ingredientId" FROM UserTaste)) * 15
+                        +
+                        (CASE WHEN r.category IN (SELECT category FROM UserTaste) THEN 10 ELSE 0 END)
+                        +
+                        -- 4. SELECTED INGREDIENTS MATCH (same as before)
+                        (SELECT COUNT(*) FROM "RecipeIngredients" ri_match WHERE ri_match."recipeId" = r.id AND ri_match."ingredientId" IN (${safeJoin(input.ingredientIds)})) * 50
+                        +
+                        -- 5. GLOBAL POPULARITY (same as before)
+                        COALESCE((SELECT COUNT(*) FROM "UserRecipes" ur WHERE ur."recipeId" = r.id), 0) * 2
+                        +
+                        COALESCE((SELECT SUM(uri.counter) FROM "UserRecipeInterests" uri WHERE uri."recipeId" = r.id), 0) * 1
+                        +
+                        -- 6. RANDOMNESS (same as before)
+                        (RANDOM() * 3)
+
+                    ) as relevance_score
+                        -- (
+                        --     -- SCORE COMPONENT 1: STRICT PREFERENCE MATCHING
+                        --     CASE WHEN
+                        --         ${input.estimatedTime ? Prisma.sql`r."estimatedTime" <= ${input.estimatedTime}` : Prisma.sql`1=1`}
+                        --     THEN 200 ELSE 0 END -- Lowered base score, as diet is now separat
+                        --     +
+                        --     CASE WHEN
+                        --         ${input.highProtein ? Prisma.sql`r.protein >= 80` : Prisma.sql`1=1`} -- Adjusted threshold
+                        --     THEN 300 ELSE 0 END -- Lowered base score, as diet is now separat
+                        --     +
+                        --     CASE WHEN
+                        --         ${input.lowCalorie ? Prisma.sql`r.calorie <= 700` : Prisma.sql`1=1`} -- Adjusted threshold
+                        --     THEN 200 ELSE 0 END -- Lowered base score, as diet is now separat
+                        --     +
+                        --     -- IMPROVEMENT 2: HEAVY DIET TYPE WEIGHTING (if not 'None')
+                        --     CASE WHEN 
+                        --         ${input.dietTypeId && input.dietTypeId !== 1 ? Prisma.sql`r."dietTypeId" = ${input.dietTypeId}` : Prisma.sql`1=0`}
+                        --     THEN 1200 ELSE 0 END
+                        --     +
+                        --     -- SCORE COMPONENT 2: TASTE PROFILE SIMILARITY
+                        --     (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (SELECT "ingredientId" FROM UserTaste)) * 15
+                        --     +
+                        --     (CASE WHEN r.category IN (SELECT category FROM UserTaste) THEN 10 ELSE 0 END)
+                        --     +
+                        --     -- SCORE COMPONENT 3: SELECTED INGREDIENTS MATCH
+                        --     (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (${safeJoin(input.ingredientIds)})) * 50
+                        --     +
+                        --     -- SCORE COMPONENT 4: GLOBAL POPULARITY
+                        --     COALESCE((SELECT COUNT(*) FROM "UserRecipes" ur WHERE ur."recipeId" = r.id), 0) * 2
+                        --     +
+                        --     (COALESCE((SELECT SUM(uri.counter) FROM "UserRecipeInterests" uri WHERE uri."recipeId" = r.id), 0) * 1)
+                        --     +
+                        --     -- SCORE COMPONENT 5: RANDOMNESS
+                        --     (RANDOM() * 6)
+                        -- ) as relevance_score
                     FROM "Recipe" r
                     WHERE
                         -- IMPROVEMENT 1: STRICT ALLERGEN EXCLUSION
@@ -603,6 +645,14 @@ getAnonymousTopIngredients: publicProcedure
                         )
                         -- IMPROVEMENT: Strict Diet Type Filter
                         AND (${input.dietTypeId && input.dietTypeId !== 1 ? Prisma.sql`r."dietTypeId" = ${input.dietTypeId}` : Prisma.sql`1=1`})
+
+                        -- NEW: Strict Ingredient Search Filter (with the fix)
+                        AND (${input.strictSearch && selectedIngredientCount > 0 ? Prisma.sql`
+                            (SELECT COUNT(DISTINCT ri_strict."ingredientId") -- <-- QUOTED "ingredientId"
+                            FROM "RecipeIngredients" ri_strict 
+                            WHERE ri_strict."recipeId" = r.id AND ri_strict."ingredientId" IN (${safeJoin(input.ingredientIds)})) = ${selectedIngredientCount} -- <-- QUOTED "ingredientId"
+                        ` : Prisma.sql`1=1`})
+
                         -- Exclude recipes the user has already favourited or shown interest in
                         AND r.id NOT IN (${safeJoin(allExcludedIds)})
                 )
@@ -715,7 +765,7 @@ getAnonymousTopIngredients: publicProcedure
         }))
         .query(async ({ ctx, input }) => {
             const { term } = input;
-            const limit = 4; // Fetch 4 of each to get up to 8 total
+            const limit = 10; // Fetch 4 of each to get up to 8 total
 
             // If the search term is empty, return nothing
             if (!term.trim()) {
@@ -754,27 +804,89 @@ getAnonymousTopIngredients: publicProcedure
                 }),
             ]);
 
-            // Combine and format the results
-            const formattedRecipes = recipes.map(r => ({
+            // // Combine and format the results
+            // const formattedRecipes = recipes.map(r => ({
+            //     id: `recipe-${r.id}`,
+            //     name: r.title,
+            //     type: 'Recipe' as const, // Use 'as const' for strong typing
+            // }));
+
+            // const formattedIngredients = ingredients.map(i => ({
+            //     id: `ingredient-${i.id}`,
+            //     name: i.name,
+            //     type: 'Ingredient' as const,
+            // }));
+
+            // --- NEW: SCORING AND RANKING LOGIC ---
+
+            // 1. Create a scoring function
+            const calculateScore = (name: string, searchTerm: string): number => {
+                const lowerName = name.toLowerCase();
+                const lowerTerm = searchTerm.toLowerCase();
+
+                // Rule 1: Exact match = highest score
+                if (lowerName === lowerTerm) {
+                    return 100;
+                }
+                
+                // Rule 2: Starts with the search term = high score
+                if (lowerName.startsWith(lowerTerm)) {
+                    return 90;
+                }
+
+                // Rule 3: Matches a whole word within the name = medium score
+                // We use a regular expression to match the term as a whole word
+                const wordBoundaryRegex = new RegExp(`\\b${_.escapeRegExp(lowerTerm)}\\b`);
+                if (wordBoundaryRegex.test(lowerName)) {
+                    return 75;
+                }
+
+                // Rule 4: Simple "contains" match = base score
+                // We can add a small bonus for shorter items, as they are often more relevant
+                // (e.g., "Chicken" is a better match for "chick" than "Chicken and Vegetable Skewers")
+                const lengthBonus = Math.max(0, 10 - lowerName.length);
+                return 50 + lengthBonus;
+            };
+
+            // 2. Format and score each result
+            const formattedAndScoredRecipes = recipes.map(r => ({
                 id: `recipe-${r.id}`,
                 name: r.title,
-                type: 'Recipe' as const, // Use 'as const' for strong typing
+                type: 'Recipe' as const,
+                score: calculateScore(r.title, input.term),
             }));
 
-            const formattedIngredients = ingredients.map(i => ({
+            const formattedAndScoredIngredients = ingredients.map(i => ({
                 id: `ingredient-${i.id}`,
                 name: i.name,
                 type: 'Ingredient' as const,
+                score: calculateScore(i.name, input.term),
             }));
 
-            // In a real system, you might rank these more intelligently.
-            // For now, we'll just interleave them.
-            const combinedResults = [...formattedRecipes, ...formattedIngredients];
+
+            // // In a real system, you might rank these more intelligently.
+            // // For now, we'll just interleave them.
+            // const combinedResults = [...formattedIngredients, ...formattedRecipes];
+
+            // === NEW INTERLEAVING LOGIC ===
+            const combinedResults = [];
+            const maxLength = Math.max(formattedAndScoredIngredients.length, formattedAndScoredRecipes.length);
+
+            for (let i = 0; i < maxLength; i++) {
+                // Add an ingredient if one exists at this index
+                if (i < formattedAndScoredIngredients.length) {
+                    combinedResults.push(formattedAndScoredIngredients[i]);
+                }
+                // Add a recipe if one exists at this index
+                if (i < formattedAndScoredRecipes.length) {
+                    combinedResults.push(formattedAndScoredRecipes[i]);
+                }
+            }
 
             // You could add more sophisticated ranking here if needed
             // For example, prioritize exact matches, etc.
 
-            return combinedResults.slice(0, 8); // Ensure we don't exceed 8 total results
+            return combinedResults.slice(0, 20); // Ensure we don't exceed 8 total results
         }),
 
 

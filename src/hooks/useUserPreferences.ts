@@ -10,6 +10,7 @@ interface UserPreferences {
   allergensIDList: number[];
   highProtein: boolean;
   lowCalorie: boolean;
+  strictSearch: boolean;
 }
 
 const LOCAL_STORAGE_KEY = 'userPreferences';
@@ -21,6 +22,7 @@ const defaultPreferences: UserPreferences = {
   allergensIDList: [],
   highProtein: false,
   lowCalorie: false,
+  strictSearch: false
 };
 
 export function useUserPreferences() {
@@ -32,6 +34,7 @@ export function useUserPreferences() {
   const [allergensIDList, setAllergensIDList] = useState<number[]>(defaultPreferences.allergensIDList);
   const [highProtein, setHighProtein] = useState<boolean>(defaultPreferences.highProtein);
   const [lowCalorie, setLowCalorie] = useState<boolean>(defaultPreferences.lowCalorie);
+  const [strictSearch, setStrictSearch] = useState<boolean>(defaultPreferences.strictSearch);
   const [isLoading, setIsLoading] = useState(true);
 
   // tRPC hooks
@@ -45,6 +48,7 @@ export function useUserPreferences() {
     setAllergensIDList(prefs.allergensIDList ?? defaultPreferences.allergensIDList);
     setHighProtein(prefs.highProtein ?? defaultPreferences.highProtein);
     setLowCalorie(prefs.lowCalorie ?? defaultPreferences.lowCalorie);
+    setStrictSearch(prefs.strictSearch ?? defaultPreferences.strictSearch);
     setIsLoading(false);
   };
 
@@ -89,10 +93,10 @@ export function useUserPreferences() {
   // Effect to save to localStorage for logged-out users whenever a preference changes
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
-      const currentPrefs: UserPreferences = { dietTypeId, estimatedTimeOption, allergensIDList, highProtein, lowCalorie };
+      const currentPrefs: UserPreferences = { dietTypeId, estimatedTimeOption, allergensIDList, highProtein, lowCalorie, strictSearch };
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentPrefs));
     }
-  }, [dietTypeId, estimatedTimeOption, allergensIDList, highProtein, lowCalorie, sessionStatus]);
+  }, [dietTypeId, estimatedTimeOption, allergensIDList, highProtein, lowCalorie, strictSearch, sessionStatus]);
 
 
   // Function to be called by the "Let's Cook" button
@@ -103,14 +107,15 @@ export function useUserPreferences() {
         estimatedTime: Number(estimatedTimeOption.replace(new RegExp(" minutes", 'g'), '')), 
         allergensIDList, 
         highProtein, 
-        lowCalorie 
+        lowCalorie,
+        strictSearch
       };
       saveMutation.mutate(currentPrefs, {
         onSuccess: () => console.log("Preferences saved to DB!"),
         onError: (err) => console.error("Failed to save preferences:", err),
       });
     }
-  }, [sessionStatus, dietTypeId, estimatedTimeOption, allergensIDList, highProtein, lowCalorie, saveMutation]);
+  }, [sessionStatus, dietTypeId, estimatedTimeOption, allergensIDList, highProtein, lowCalorie, strictSearch, saveMutation]);
 
   return {
     // State values
@@ -119,6 +124,7 @@ export function useUserPreferences() {
     allergensIDList,
     highProtein,
     lowCalorie,
+    strictSearch,
     isLoading,
     // State setters
     setDietTypeId,
@@ -126,6 +132,7 @@ export function useUserPreferences() {
     setAllergensIDList,
     setHighProtein,
     setLowCalorie,
+    setStrictSearch,
     // Actions
     savePreferencesToDb,
   };

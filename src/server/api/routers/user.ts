@@ -17,6 +17,7 @@ export const userRouter = createTRPCRouter({
         estimatedTime: true,
         highProtein: true,
         lowCalorie: true,
+        strictSearch: true,
         UserAllergens: { // Select the related allergens
           select: {
             allergenId: true,
@@ -33,6 +34,7 @@ export const userRouter = createTRPCRouter({
       estimatedTimeOption: user.estimatedTime ? String(user.estimatedTime)+" minutes" : null,
       highProtein: user.highProtein,
       lowCalorie: user.lowCalorie,
+      strictSearch: user.strictSearch ?? false,
       allergensIDList: user.UserAllergens.map((a) => a.allergenId),
     };
   }),
@@ -45,6 +47,7 @@ export const userRouter = createTRPCRouter({
         allergensIDList: z.array(z.number()),
         highProtein: z.boolean(),
         lowCalorie: z.boolean(),
+        strictSearch: z.boolean()
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -59,6 +62,7 @@ export const userRouter = createTRPCRouter({
             estimatedTime: input.estimatedTime,
             highProtein: input.highProtein,
             lowCalorie: input.lowCalorie,
+            strictSearch: input.strictSearch
           },
         });
 

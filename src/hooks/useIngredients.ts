@@ -77,8 +77,8 @@ export function useIngredients() {
 
       const listToModify = [...prevIngredients];
       
-      // If list is full (assuming 18 is the limit), remove one
-      if (listToModify.length >= 18) {
+      // If list is full (assuming 22 is the limit), remove one
+      if (listToModify.length >= 22) {
         let indexToRemove = -1;
 
         // Find the last unselected ingredient by searching from the end

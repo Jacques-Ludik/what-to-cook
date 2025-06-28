@@ -367,9 +367,9 @@ const MaintenancePage: NextPage = () => {
                             </div>
                             <div className="relative mt-4">
                                 <input type="text" value={ingredientSearchTerm} onChange={e => setIngredientSearchTerm(e.target.value)} placeholder="Search to add ingredient..." className="w-full p-2 border rounded-md" />
-                                {ingredientSearchTerm && ingredientSearchResults && (
+                                {ingredientSearchTerm && ingredientSearchResults && ingredientSearchResults.filter((ing) => ing !== undefined).length > 0 && (
                                     <ul className="absolute z-10 w-full bg-white border rounded-md mt-1 max-h-48 overflow-y-auto shadow-lg">
-                                        {ingredientSearchResults.filter(r => r.type === 'Ingredient').map(ing => (
+                                        {ingredientSearchResults.filter(r => r !== undefined).filter(r => r.type === 'Ingredient').map(ing => (
                                             <li key={ing.id} onClick={() => handleAddIngredient(ing)} className="p-2 hover:bg-gray-100 cursor-pointer">{ing.name}</li>
                                         ))}
                                     </ul>

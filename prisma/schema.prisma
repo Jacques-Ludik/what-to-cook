@@ -71,6 +71,7 @@ model User {
     ingredients     UserIngredients[]
     UserAllergens UserAllergens[]
     estimatedTime Int?
+    strictSearch  Boolean? @default(false)
     highProtein   Boolean? @default(false)
     lowCalorie    Boolean? @default(false)
     createdAt    DateTime  @default(now())

@@ -12,6 +12,7 @@ interface RecipeFeedInput {
   estimatedTime?: number;
   highProtein?: boolean;
   lowCalorie?: boolean;
+  strictSearch?: boolean;
 excludedAllergenIds?: number[];
 interestRecipeIds?: Record<string, number>;
 ingredientIds?: number[];
