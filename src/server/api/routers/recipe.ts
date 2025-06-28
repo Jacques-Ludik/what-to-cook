@@ -321,7 +321,7 @@ export const recipeRouter = createTRPCRouter({
     // NEW: Procedure for LOGGED-IN users
   getPersonalizedTopIngredients: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
-    const ingredientsLimit = 18;
+    const ingredientsLimit = 22;
 
     // 1. Fetch the user's top ingredients, ordered by their usage counter
     const userTopIngredients = await ctx.db.userIngredients.findMany({
@@ -397,7 +397,7 @@ getAnonymousTopIngredients: publicProcedure
     })
   )
   .query(async ({ ctx, input }) => {
-    const ingredientsLimit = 18;
+    const ingredientsLimit = 22;
 
     // 1. Construct the user's "personal" list from the localStorage counts
     const sortedLocalIds = Object.keys(input.counts)
