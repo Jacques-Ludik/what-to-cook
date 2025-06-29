@@ -535,6 +535,19 @@ getAnonymousTopIngredients: publicProcedure
 
       const selectedIngredientCount = input.ingredientIds?.length ?? 0;
 
+
+      // === NEW LOGIC: This now runs for BOTH strict and non-strict search ===
+      // Find the groups for the selected ingredients to use in scoring/filtering.
+      let requiredIngredientGroupIds: number[] = [];
+      if (input.ingredientIds && input.ingredientIds.length > 0) {
+          const ingredientsWithGroups = await ctx.db.ingredient.findMany({
+              where: { id: { in: input.ingredientIds } },
+              select: { ingredientGroupId: true },
+          });
+          requiredIngredientGroupIds = [...new Set(ingredientsWithGroups.map(i => i.ingredientGroupId).filter((id): id is number => id !== null))];
+      }
+      const requiredGroupCount = requiredIngredientGroupIds.length;
+
             // We use a transaction to ensure setseed() is scoped to this query
       const recipes = await ctx.db.$transaction(async (tx) => {
         // Set the seed for the random number generator for this transaction
@@ -555,6 +568,16 @@ getAnonymousTopIngredients: publicProcedure
                     WHERE r.id IN (${safeJoin(input.favouriteRecipeIds)})
                         OR r.id IN (${safeJoin(interestRecipeIds)})
                 ),
+
+                -- NEW CTE: This finds all recipe IDs that contain at least ONE ingredient
+                -- from a group the user did NOT select. These are the recipes to exclude.
+                RecipesWithUnwantedIngredients AS (
+                    SELECT DISTINCT ri."recipeId" as id
+                    FROM "RecipeIngredients" ri
+                    JOIN "Ingredient" i ON ri."ingredientId" = i.id
+                    WHERE i."ingredientGroupId" NOT IN (${safeJoin(requiredIngredientGroupIds)})
+                ),
+
                 RankedRecipes AS (
                     SELECT
                         r.id,
@@ -588,9 +611,19 @@ getAnonymousTopIngredients: publicProcedure
                         +
                         (CASE WHEN r.category IN (SELECT category FROM UserTaste) THEN 10 ELSE 0 END)
                         +
-                        -- 4. SELECTED INGREDIENTS MATCH (same as before)
-                        (SELECT COUNT(*) FROM "RecipeIngredients" ri_match WHERE ri_match."recipeId" = r.id AND ri_match."ingredientId" IN (${safeJoin(input.ingredientIds)})) * 50
+                        -- === THE NEW, IMPROVED INGREDIENT MATCH SCORE ===
+                        -- This component now scores based on how many *groups* are matched.
+                        (
+                          SELECT COUNT(DISTINCT i_match."ingredientGroupId")
+                          FROM "RecipeIngredients" ri_match
+                          JOIN "Ingredient" i_match ON ri_match."ingredientId" = i_match.id
+                          WHERE ri_match."recipeId" = r.id
+                            AND i_match."ingredientGroupId" IN (${safeJoin(requiredIngredientGroupIds)})
+                        ) * 50 -- Multiply the number of matched groups by 50
                         +
+                        -- -- 4. SELECTED INGREDIENTS MATCH (same as before)
+                        -- (SELECT COUNT(*) FROM "RecipeIngredients" ri_match WHERE ri_match."recipeId" = r.id AND ri_match."ingredientId" IN (${safeJoin(input.ingredientIds)})) * 50
+                        -- +
                         -- 5. GLOBAL POPULARITY (same as before)
                         COALESCE((SELECT COUNT(*) FROM "UserRecipes" ur WHERE ur."recipeId" = r.id), 0) * 2
                         +
@@ -600,42 +633,9 @@ getAnonymousTopIngredients: publicProcedure
                         (RANDOM() * 3)
 
                     ) as relevance_score
-                        -- (
-                        --     -- SCORE COMPONENT 1: STRICT PREFERENCE MATCHING
-                        --     CASE WHEN
-                        --         ${input.estimatedTime ? Prisma.sql`r."estimatedTime" <= ${input.estimatedTime}` : Prisma.sql`1=1`}
-                        --     THEN 200 ELSE 0 END -- Lowered base score, as diet is now separat
-                        --     +
-                        --     CASE WHEN
-                        --         ${input.highProtein ? Prisma.sql`r.protein >= 80` : Prisma.sql`1=1`} -- Adjusted threshold
-                        --     THEN 300 ELSE 0 END -- Lowered base score, as diet is now separat
-                        --     +
-                        --     CASE WHEN
-                        --         ${input.lowCalorie ? Prisma.sql`r.calorie <= 700` : Prisma.sql`1=1`} -- Adjusted threshold
-                        --     THEN 200 ELSE 0 END -- Lowered base score, as diet is now separat
-                        --     +
-                        --     -- IMPROVEMENT 2: HEAVY DIET TYPE WEIGHTING (if not 'None')
-                        --     CASE WHEN 
-                        --         ${input.dietTypeId && input.dietTypeId !== 1 ? Prisma.sql`r."dietTypeId" = ${input.dietTypeId}` : Prisma.sql`1=0`}
-                        --     THEN 1200 ELSE 0 END
-                        --     +
-                        --     -- SCORE COMPONENT 2: TASTE PROFILE SIMILARITY
-                        --     (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (SELECT "ingredientId" FROM UserTaste)) * 15
-                        --     +
-                        --     (CASE WHEN r.category IN (SELECT category FROM UserTaste) THEN 10 ELSE 0 END)
-                        --     +
-                        --     -- SCORE COMPONENT 3: SELECTED INGREDIENTS MATCH
-                        --     (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (${safeJoin(input.ingredientIds)})) * 50
-                        --     +
-                        --     -- SCORE COMPONENT 4: GLOBAL POPULARITY
-                        --     COALESCE((SELECT COUNT(*) FROM "UserRecipes" ur WHERE ur."recipeId" = r.id), 0) * 2
-                        --     +
-                        --     (COALESCE((SELECT SUM(uri.counter) FROM "UserRecipeInterests" uri WHERE uri."recipeId" = r.id), 0) * 1)
-                        --     +
-                        --     -- SCORE COMPONENT 5: RANDOMNESS
-                        --     (RANDOM() * 6)
-                        -- ) as relevance_score
+
                     FROM "Recipe" r
+
                     WHERE
                         -- IMPROVEMENT 1: STRICT ALLERGEN EXCLUSION
                         -- This filters out recipes completely before they are even scored.
@@ -646,15 +646,22 @@ getAnonymousTopIngredients: publicProcedure
                         -- IMPROVEMENT: Strict Diet Type Filter
                         AND (${input.dietTypeId && input.dietTypeId !== 1 ? Prisma.sql`r."dietTypeId" = ${input.dietTypeId}` : Prisma.sql`1=1`})
 
-                        -- NEW: Strict Ingredient Search Filter (with the fix)
-                        AND (${input.strictSearch && selectedIngredientCount > 0 ? Prisma.sql`
-                            (SELECT COUNT(DISTINCT ri_strict."ingredientId") -- <-- QUOTED "ingredientId"
-                            FROM "RecipeIngredients" ri_strict 
-                            WHERE ri_strict."recipeId" = r.id AND ri_strict."ingredientId" IN (${safeJoin(input.ingredientIds)})) = ${selectedIngredientCount} -- <-- QUOTED "ingredientId"
-                        ` : Prisma.sql`1=1`})
-
                         -- Exclude recipes the user has already favourited or shown interest in
                         AND r.id NOT IN (${safeJoin(allExcludedIds)})
+
+                        -- === THE NEW, ROBUST STRICT FILTER ===
+                        -- This line is now simple, explicit, and correct.
+                        AND (${
+                            input.strictSearch && requiredIngredientGroupIds.length > 0
+                            ? Prisma.sql`r.id NOT IN (SELECT id FROM RecipesWithUnwantedIngredients)`
+                            : Prisma.sql`1=1`
+                        })
+                        -- AND (${input.strictSearch && requiredGroupCount > 0 ? Prisma.sql`` : Prisma.sql`1=1`})
+                        -- === NEW FILTER: EXCLUDE RECIPES WITH NO INGREDIENTS ===
+                        AND EXISTS (
+                            SELECT 1 FROM "RecipeIngredients" ri_check
+                            WHERE ri_check."recipeId" = r.id
+                        )
                 )
                 SELECT *
                 FROM RankedRecipes
@@ -678,6 +685,79 @@ getAnonymousTopIngredients: publicProcedure
                 nextCursor,
             };
         }),
+
+        // -- Condition 1: The recipe MUST contain an ingredient from ALL required groups.
+        // (
+        //     SELECT COUNT(DISTINCT i."ingredientGroupId")
+        //     FROM "RecipeIngredients" ri
+        //     JOIN "Ingredient" i ON ri."ingredientId" = i.id
+        //     WHERE ri."recipeId" = r.id
+        //         AND i."ingredientGroupId" IN (${safeJoin(requiredIngredientGroupIds)})
+        // ) = ${requiredGroupCount}
+        //         -- AND
+        // -- -- Condition 2: The recipe MUST NOT contain any ingredient from a group that is NOT required.
+        // -- NOT EXISTS (
+        // --     SELECT 1
+        // --     FROM "RecipeIngredients" ri_extra
+        // --     JOIN "Ingredient" i_extra ON ri_extra."ingredientId" = i_extra.id
+        // --     WHERE ri_extra."recipeId" = r.id
+        // --         AND i_extra."ingredientGroupId" NOT IN (${safeJoin(requiredIngredientGroupIds)})
+        //)
+
+            // -- === THE NEW, IMPROVED STRICT SEARCH FILTER ===
+            //             AND (${input.strictSearch && requiredGroupCount > 0 ? Prisma.sql`
+            //                 (
+            //                     SELECT COUNT(DISTINCT i."ingredientGroupId")
+            //                     FROM "RecipeIngredients" ri_strict
+            //                     JOIN "Ingredient" i ON ri_strict."ingredientId" = i.id
+            //                     WHERE ri_strict."recipeId" = r.id
+            //                       AND i."ingredientGroupId" IN (${safeJoin(requiredIngredientGroupIds)})
+            //                 ) = ${requiredGroupCount}
+            //             ` : Prisma.sql`1=1`})
+            //             -- -- NEW: Strict Ingredient Search Filter (with the fix)
+            //             -- AND (${input.strictSearch && selectedIngredientCount > 0 ? Prisma.sql`
+            //             --     (SELECT COUNT(DISTINCT ri_strict."ingredientId") -- <-- QUOTED "ingredientId"
+            //             --     FROM "RecipeIngredients" ri_strict 
+            //             --     WHERE ri_strict."recipeId" = r.id AND ri_strict."ingredientId" IN (${safeJoin(input.ingredientIds)})) = ${selectedIngredientCount} -- <-- QUOTED "ingredientId"
+            //             -- ` : Prisma.sql`1=1`})
+
+                        //       -- (
+                        // --     -- SCORE COMPONENT 1: STRICT PREFERENCE MATCHING
+                        // --     CASE WHEN
+                        // --         ${input.estimatedTime ? Prisma.sql`r."estimatedTime" <= ${input.estimatedTime}` : Prisma.sql`1=1`}
+                        // --     THEN 200 ELSE 0 END -- Lowered base score, as diet is now separat
+                        // --     +
+                        // --     CASE WHEN
+                        // --         ${input.highProtein ? Prisma.sql`r.protein >= 80` : Prisma.sql`1=1`} -- Adjusted threshold
+                        // --     THEN 300 ELSE 0 END -- Lowered base score, as diet is now separat
+                        // --     +
+                        // --     CASE WHEN
+                        // --         ${input.lowCalorie ? Prisma.sql`r.calorie <= 700` : Prisma.sql`1=1`} -- Adjusted threshold
+                        // --     THEN 200 ELSE 0 END -- Lowered base score, as diet is now separat
+                        // --     +
+                        // --     -- IMPROVEMENT 2: HEAVY DIET TYPE WEIGHTING (if not 'None')
+                        // --     CASE WHEN 
+                        // --         ${input.dietTypeId && input.dietTypeId !== 1 ? Prisma.sql`r."dietTypeId" = ${input.dietTypeId}` : Prisma.sql`1=0`}
+                        // --     THEN 1200 ELSE 0 END
+                        // --     +
+                        // --     -- SCORE COMPONENT 2: TASTE PROFILE SIMILARITY
+                        // --     (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (SELECT "ingredientId" FROM UserTaste)) * 15
+                        // --     +
+                        // --     (CASE WHEN r.category IN (SELECT category FROM UserTaste) THEN 10 ELSE 0 END)
+                        // --     +
+                        // --     -- SCORE COMPONENT 3: SELECTED INGREDIENTS MATCH
+                        // --     (SELECT COUNT(*) FROM "RecipeIngredients" ri WHERE ri."recipeId" = r.id AND ri."ingredientId" IN (${safeJoin(input.ingredientIds)})) * 50
+                        // --     +
+                        // --     -- SCORE COMPONENT 4: GLOBAL POPULARITY
+                        // --     COALESCE((SELECT COUNT(*) FROM "UserRecipes" ur WHERE ur."recipeId" = r.id), 0) * 2
+                        // --     +
+                        // --     (COALESCE((SELECT SUM(uri.counter) FROM "UserRecipeInterests" uri WHERE uri."recipeId" = r.id), 0) * 1)
+                        // --     +
+                        // --     -- SCORE COMPONENT 5: RANDOMNESS
+                        // --     (RANDOM() * 6)
+                        // -- ) as relevance_score
+
+
     // .query(async ({ ctx, input }) => {
     //   const limit = input.limit ?? 9;
     //   const { cursor } = input;

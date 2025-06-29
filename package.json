@@ -21,7 +21,10 @@
     "typecheck": "tsc --noEmit",
     "db:seed": "node --loader ts-node/esm --experimental-specifier-resolution=node scripts/seed-database.ts",
     "extract-titles": "node --loader ts-node/esm --experimental-specifier-resolution=node scripts/extract-titles.ts",
-    "update-images": "node --loader ts-node/esm --experimental-specifier-resolution=node scripts/update-image-urls.ts"
+    "update-images": "node --loader ts-node/esm --experimental-specifier-resolution=node scripts/update-image-urls.ts",
+    "get-ingredients": "node --loader ts-node/esm --experimental-specifier-resolution=node scripts/get-all-ingredients.ts",
+    "db:seed:groups": "node --loader ts-node/esm --experimental-specifier-resolution=node scripts/seed-ingredient-groups.ts",
+    "find:no-ingredients": "node --loader ts-node/esm --experimental-specifier-resolution=node scripts/find-recipes-without-ingredients.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",
