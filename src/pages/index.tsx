@@ -88,17 +88,6 @@ export default function Home() {
   const { selectedIds, toggleIngredient, saveSelection, addAndPersistSelection } = useIngredientSelection();
     const { favouriteIds, toggleFavourite } = useFavourites();
     const { addInterest } = useInterests();
-  // const { interestData } = useInterests();
-
-
-
-    // const updateImages = api.recipe.updateImageUrl.useMutation();
-    // const handleUpdateImages = () => {
-    //   updateImages.mutate({id: 1112, url: "https://cdn.loveandlemons.com/wp-content/uploads/2024/03/egg-salad-recipe.jpg"});
-    // }
-
-
-
 
   // === The "Staged" Input State ===
     // This state holds the input that is sent to the query.
@@ -250,8 +239,14 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>What to Cook</title>
-        <meta name="description" content="Select ingredients you have available to get mouth watering recipes or just browse through delicious recipe ideas" />
+        <title>What to Cook? - Find Recipes with Ingredients You Own</title>
+    <meta 
+        name="description" 
+        content="Don't know what to cook? Select the ingredients you have at home and discover thousands of delicious, easy-to-make recipes. Reduce food waste and find your next meal!" 
+    />
+    <meta name="keywords" content="what to cook, recipe finder, ingredients, pantry recipes, cooking, food, dinner ideas" />
+        {/* <title>What to Cook</title>
+        <meta name="description" content="Select ingredients you have available to get mouth watering recipes or just browse through delicious recipe ideas" /> */}
         <link rel="icon" href="/whattocook-logo.png" />
       </Head>
       <main className="flex min-h-screen flex-col items-center bg-[#faebd7] px-4 py-6">
@@ -443,25 +438,6 @@ export default function Home() {
                     toggleFavourite={toggleFavourite}
                 />
             )}
-            {/* <FavouritesModal
-                isOpen={isFavouritesModalOpen}
-                closeModal={() => setIsFavouritesModalOpen(false)}
-                favouriteIds={Array.from(favouriteIds)}
-                onRecipeClick={openRecipeModal}
-            />
-            {viewingRecipeId !== null && (
-                <RecipeModal
-                    isOpen={viewingRecipeId !== null}
-                    recipeId={viewingRecipeId}
-                    closeModal={() => {
-                        setViewingRecipeId(null);
-                        // Optional: Clean up the URL when the modal is closed
-                        void router.push('/', undefined, { shallow: true });
-                    }}
-                    isFavourited={favouriteIds.has(viewingRecipeId)}
-                    toggleFavourite={toggleFavourite}
-                />
-            )} */}
             <ScrollToTopButton isExternallyHidden={isAnyModalOpen} />
     </>
   );

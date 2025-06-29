@@ -1,0 +1,8 @@
+# public/robots.txt
+User-agent: *
+Allow: /
+
+# Disallow admin or maintenance pages from being indexed
+Disallow: /maintenance
+
+Sitemap: https://www.whattocook.food/sitemap.xml
