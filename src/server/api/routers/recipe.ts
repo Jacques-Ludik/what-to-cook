@@ -861,6 +861,10 @@ getAnonymousTopIngredients: publicProcedure
                             contains: term,
                             mode: 'insensitive', // Case-insensitive search
                         },
+                        //exclude recipes that have no ingredients
+                        ingredients: {
+                            some: {}, // Ensure the recipe has at least one ingredient
+                        },
                     },
                     take: limit,
                     select: {
