@@ -99,37 +99,58 @@ export const userRouter = createTRPCRouter({
         return { success: true, message: "No ingredients to update." };
       }
 
-      // Use a transaction to perform multiple operations atomically
-      return ctx.db.$transaction(async (tx) => {
-        // We'll loop through each ingredient ID provided
-        for (const ingredientId of ingredientIds) {
-          // The `upsert` operation is perfect here:
-          // - If a UserIngredients record for this user/ingredient already exists, it will run the `update` block.
-          // - If it does not exist, it will run the `create` block.
-          await tx.userIngredients.upsert({
-            where: {
-              // The unique identifier for the UserIngredients record
-              userId_ingredientId: {
-                userId: userId,
-                ingredientId: ingredientId,
-              },
-            },
-            // What to do if the record exists
-            update: {
-              counter: {
-                increment: 1, // Increment the counter by 1
-              },
-            },
-            // What to do if the record does NOT exist
-            create: {
-              userId: userId,
-              ingredientId: ingredientId,
-              counter: 1, // Start the counter at 1
-            },
-          });
-        }
-        return { success: true };
-      });
+      // // Use a transaction to perform multiple operations atomically
+      // return ctx.db.$transaction(async (tx) => {
+      //   // We'll loop through each ingredient ID provided
+      //   for (const ingredientId of ingredientIds) {
+      //     // The `upsert` operation is perfect here:
+      //     // - If a UserIngredients record for this user/ingredient already exists, it will run the `update` block.
+      //     // - If it does not exist, it will run the `create` block.
+      //     await tx.userIngredients.upsert({
+      //       where: {
+      //         // The unique identifier for the UserIngredients record
+      //         userId_ingredientId: {
+      //           userId: userId,
+      //           ingredientId: ingredientId,
+      //         },
+      //       },
+      //       // What to do if the record exists
+      //       update: {
+      //         counter: {
+      //           increment: 1, // Increment the counter by 1
+      //         },
+      //       },
+      //       // What to do if the record does NOT exist
+      //       create: {
+      //         userId: userId,
+      //         ingredientId: ingredientId,
+      //         counter: 1, // Start the counter at 1
+      //       },
+      //     });
+      //   }
+      //   return { success: true };
+      // });
+
+       // Use a transaction with an extended timeout just in case
+        return ctx.db.$transaction(async (tx) => {
+            // 1. Create an array of promises without awaiting them
+            const upsertPromises = ingredientIds.map(ingredientId =>
+                tx.userIngredients.upsert({
+                    where: {
+                        userId_ingredientId: { userId, ingredientId },
+                    },
+                    update: { counter: { increment: 1 } },
+                    create: { userId, ingredientId, counter: 1 },
+                })
+            );
+
+            // 2. Execute all the promises in parallel
+            await Promise.all(upsertPromises);
+
+            return { success: true };
+        }, {
+            timeout: 15000 // 15 seconds, a safe buffer
+        });
     }),
 
     getInitialIngredients: protectedProcedure.query(({ ctx }) => {
