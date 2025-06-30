@@ -253,7 +253,8 @@ export default function Home() {
   {/* Header: Adjusted for responsiveness */}
   <header className="relative flex w-full max-w-7xl items-center justify-center py-2">
     {/* --- FAVOURITES BUTTON (TOP-LEFT) --- */}
-    <div className="absolute left-0 top-1/2 -translate-y-1/2">
+     <nav className="absolute left-0 top-1/2 -translate-y-1/2" aria-label="Favourites">
+    {/* <div className="absolute left-0 top-1/2 -translate-y-1/2"> */}
       <button
         onClick={() => setIsFavouritesModalOpen(true)}
         className="flex items-center gap-2 rounded-lg bg-green-800 p-2 text-white shadow-md transition hover:bg-green-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800"
@@ -265,7 +266,7 @@ export default function Home() {
         {/* Text is hidden on mobile, appears on small screens and up */}
         <span className="hidden font-semibold sm:inline">Favourites</span>
       </button>
-    </div>
+    </nav>
 
     {/* --- TITLE --- */}
     <div className="text-center">
@@ -276,13 +277,14 @@ export default function Home() {
     </div>
 
     {/* --- AUTH BUTTON (TOP-RIGHT) --- */}
-    <div className="absolute right-0 top-1/2 -translate-y-1/2">
+    <nav className="absolute right-0 top-1/2 -translate-y-1/2">
       {/* The AuthShowcase component itself can also be made responsive */}
       <AuthShowcase />
-    </div>
+    </nav>
   </header>
         {/* --- SEARCH BAR AND RESULTS --- */}
-                <div className="relative mt-6 w-full max-w-lg" ref={searchContainerRef}>
+        <section aria-labelledby="search-heading" className="w-full max-w-lg">
+                <div className="relative mt-6" ref={searchContainerRef}>
                     <input
                         type="text"
                         placeholder="Search for ingredients/recipes..."
@@ -323,17 +325,24 @@ export default function Home() {
                         </div>
                     )}
                 </div>
+                </section>
                 {/* --- END SEARCH BAR --- */}
 
 
 {/* --- FILTERS CONTAINER --- */}
 {/* On large screens, use `grid` and `grid-cols-2` for perfect alignment and equal height. */}
-<div className="mt-8 grid w-full max-w-7xl grid-cols-1 gap-6 lg:grid-cols-2">
+ {/* This form tag is important. It groups related controls. */}
+    <form className="mt-8 w-full max-w-7xl" onSubmit={(e) => { e.preventDefault(); handleLetsCook(); }}>
+        {/* Wrap the filter boxes in a <fieldset> to group them semantically */}
+        <fieldset className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* The <legend> is for screen readers, sr-only hides it visually */}
+            <legend className="sr-only">Recipe Filters</legend>
+{/* <div className="mt-8 grid w-full max-w-7xl grid-cols-1 gap-6 lg:grid-cols-2"> */}
 
   {/* --- INGREDIENTS BOX --- */}
   {/* The `h-full` class is important for stretching inside a grid cell if needed, though grid usually handles this. */}
-  <div className="flex h-full w-full flex-col gap-2 rounded-2xl border-2 border-green-900 p-4">
-    <p className="text-center text-lg font-bold text-black">Ingredients</p>
+  <section aria-labelledby="ingredients-heading" className="flex h-full w-full flex-col gap-2 rounded-2xl border-2 border-green-900 p-4">
+    <h3 id="ingredients-heading" className="text-center text-lg font-bold text-black">Ingredients</h3>
     <div className="flex flex-wrap items-center justify-start gap-x-6 gap-y-2 pt-2">
       {ingredientsLoading ? (
                         <IngredientsSkeleton />
@@ -349,11 +358,10 @@ export default function Home() {
           <span className="text-black">Strict Selection</span>
         </label>
     </div>)}
-  </div>
-
+  </section>
   {/* === REFACTORED PREFERENCES BOX === */}
-  <div className="flex h-full w-full flex-col gap-4 rounded-2xl border-2 border-green-900 p-4">
-    <p className="text-center text-lg font-bold text-black">Preferences</p>
+  <section aria-labelledby="preferences-heading" className="flex h-full w-full flex-col gap-4 rounded-2xl border-2 border-green-900 p-4">
+    <h3 id="preferences-heading" className="text-center text-lg font-bold text-black">Preferences</h3>
     {/* Use `space-y-4` for consistent vertical spacing */}
     <div className="flex flex-col space-y-4">
     
@@ -396,20 +404,22 @@ export default function Home() {
       </div>
 
     </div>
-  </div>
-</div>
+  </section>
+</fieldset>
 
             {/* --- LET'S COOK BUTTON --- */}
-  <div className="my-8">
+  <div className="my-8 text-center">
     <button
+    type="submit"
       className="rounded-xl bg-green-800 px-10 py-3 text-lg font-bold text-white no-underline shadow-lg transition hover:bg-green-700 active:scale-95 sm:text-xl"
                onClick={() => handleLetsCook()}
               //onClick={() => handleCreateIngredients()}
                disabled={prefs.isLoading || ingredientsLoading}> Let&apos;s Cook!</button>                  
 </div>
+</form>
 
 {/* --- RECIPE FEED --- */}
-  <div className="w-full max-w-7xl">
+   <section aria-labelledby="recommendations-heading" className="w-full max-w-7xl">
     <h2 className="text-center text-3xl font-bold mb-6" ref={recommendationsRef}>Recommended For You</h2>
             {stagedFeedInput && <RecipeFeed
             // By changing the key, we tell React to unmount the old component and
@@ -418,7 +428,7 @@ export default function Home() {
           input={stagedFeedInput}
           onRecipeClick={openRecipeModal}
             />}
-        </div>
+        </section>
 
       </main>
       {/* === Render the Modals === */}
