@@ -434,7 +434,7 @@ export default function Home() {
       {/* === Render the Modals === */}
       <FavouritesModal
                 isOpen={!!isFavouritesModalOpen}
-                closeModal={() => setIsFavouritesModalOpen(null)}
+                closeModal={() => setIsFavouritesModalOpen(false)}
                 favouriteIds={Array.from(favouriteIds)}
                 onRecipeClick={openRecipeModal}
             />
