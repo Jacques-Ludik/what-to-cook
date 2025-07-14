@@ -188,6 +188,7 @@ export default function Home() {
         // If the favourites modal is open, close it first.
         if(isFavouritesModalOpen) {
             setIsFavouritesModalOpen(null);
+           // void router.push('/'); // Reset the URL when closing
         }
         setViewingRecipeId(recipeId);
     };
@@ -434,7 +435,14 @@ export default function Home() {
       {/* === Render the Modals === */}
       <FavouritesModal
                 isOpen={!!isFavouritesModalOpen}
-                closeModal={() => setIsFavouritesModalOpen(false)}
+                closeModal={() => {setIsFavouritesModalOpen(null);
+                  //remove the query param of the favourites modal from the URL
+                  // This will reset the URL to the home page
+                  if (router.query.show_favourites) {
+                    delete router.query.show_favourites;
+                    void router.push({ pathname: '/', query: router.query }, undefined, { shallow: true });
+                }
+                }}
                 favouriteIds={Array.from(favouriteIds)}
                 onRecipeClick={openRecipeModal}
             />
