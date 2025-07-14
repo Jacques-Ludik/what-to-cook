@@ -56,19 +56,19 @@ const createFeedInput = (
     };
 };
 
-// Define the shape of the props our page will receive from the server
-interface HomePageProps {
-    initialRecipeForModal: (Recipe & {
-      ingredients: { ingredient: { name: string }, measure: string | null }[];
-        allergens: { allergen: { name: string } }[];
-        dietType: { name: string } | null;
-        // ... include relations
-    }) | null;
-}
+// // Define the shape of the props our page will receive from the server
+// interface HomePageProps {
+//     initialRecipeForModal: (Recipe & {
+//       ingredients: { ingredient: { name: string }, measure: string | null }[];
+//         allergens: { allergen: { name: string } }[];
+//         dietType: { name: string } | null;
+//         // ... include relations
+//     }) | null;
+// }
 
-// export default function Home() {
-// The page now accepts these props
-const Home: NextPage<HomePageProps> = ({ initialRecipeForModal }) => {
+ export default function Home() {
+// // The page now accepts these props
+// const Home: NextPage<HomePageProps> = ({ initialRecipeForModal }) => {
 
   const router = useRouter(); //initialise the router
 
@@ -246,15 +246,15 @@ const Home: NextPage<HomePageProps> = ({ initialRecipeForModal }) => {
     const handleClearAllAllergens = () => prefs.setAllergensIDList([]);
 
 
-    // === Dynamic Head Component ===
-    // The <Head> content will now change based on whether we are showing a recipe or the homepage.
-    const pageTitle = initialRecipeForModal
-        ? `${initialRecipeForModal.title} - What to Cook`
-        : 'What to Cook? - Find Recipes with Ingredients You Own';
+    // // === Dynamic Head Component ===
+    // // The <Head> content will now change based on whether we are showing a recipe or the homepage.
+    // const pageTitle = initialRecipeForModal
+    //     ? `${initialRecipeForModal.title} - What to Cook`
+    //     : 'What to Cook? - Find Recipes with Ingredients You Own';
     
-    const pageDescription = initialRecipeForModal
-        ? `Learn how to make ${initialRecipeForModal.title}. Full ingredients and instructions for this delicious ${initialRecipeForModal.category} recipe.`
-        : "Don't know what to cook? Select the ingredients you have at home and discover thousands of delicious, easy-to-make recipes.";
+    // const pageDescription = initialRecipeForModal
+    //     ? `Learn how to make ${initialRecipeForModal.title}. Full ingredients and instructions for this delicious ${initialRecipeForModal.category} recipe.`
+    //     : "Don't know what to cook? Select the ingredients you have at home and discover thousands of delicious, easy-to-make recipes.";
 
 
 // === DERIVED STATE: Is any modal currently open? ===
@@ -266,24 +266,23 @@ const Home: NextPage<HomePageProps> = ({ initialRecipeForModal }) => {
     <>
       <Head>
         <title>What to Cook? - Find Recipes with Ingredients You Own</title>
-    {/* <meta 
+    <meta 
         name="description" 
         content="Don't know what to cook? Select the ingredients you have at home and discover thousands of delicious, easy-to-make recipes. Reduce food waste and find your next meal!" 
-    /> */}
-    <meta name="description" content={pageDescription} />
+    />
+    {/* <meta name="description" content={pageDescription} />
     <meta name="keywords" content="what to cook, recipe finder, ingredients, pantry recipes, cooking, food, dinner ideas" />
     {initialRecipeForModal && (
                     <>
                         <meta property="og:title" content={initialRecipeForModal.title} />
                         <meta property="og:image" content={initialRecipeForModal.imageUrl ?? '/placeholder.png'} />
                         <meta property="og:url" content={`https://www.yourwebsite.com/?recipe=${initialRecipeForModal.id}`} />
-                        {/* The JSON-LD Script tag is CRITICAL here */}
                         <script
                             type="application/ld+json"
-                            dangerouslySetInnerHTML={{ __html: JSON.stringify({ /* ... your full JSON-LD object for the recipe ... */ }) }}
+                            dangerouslySetInnerHTML={{ __html: JSON.stringify({  }) }}
                         />
                     </>
-                )}
+                )} */}
         {/* <title>What to Cook</title>
         <meta name="description" content="Select ingredients you have available to get mouth watering recipes or just browse through delicious recipe ideas" /> */}
         <link rel="icon" href="/whattocook-logo.png" />
@@ -500,41 +499,41 @@ const Home: NextPage<HomePageProps> = ({ initialRecipeForModal }) => {
 }
 
 
-// This function runs ON THE SERVER for EVERY request to the homepage.
-export const getServerSideProps: GetServerSideProps = async (context) => {
-    const { query } = context;
-    let initialRecipeForModal = null;
+// // This function runs ON THE SERVER for EVERY request to the homepage.
+// export const getServerSideProps: GetServerSideProps = async (context) => {
+//     const { query } = context;
+//     let initialRecipeForModal = null;
 
-    // Check if a `?recipe=...` parameter exists in the URL
-    const recipeIdFromUrl = query.recipe;
+//     // Check if a `?recipe=...` parameter exists in the URL
+//     const recipeIdFromUrl = query.recipe;
 
-    if (typeof recipeIdFromUrl === 'string') {
-        const recipeId = parseInt(recipeIdFromUrl, 10);
-        if (!isNaN(recipeId)) {
-            // If it exists, fetch that specific recipe's data from the database
-            const getRecipeById = api.recipe.getRecipesByIds.useQuery({ids: [recipeId]}, {enabled: false});
-            // We use `refetch` to get the data immediately
-            const recipe = await getRecipeById.refetch();
-            // const recipe = await db.recipe.findUnique({
-            //     where: { id: recipeId },
-            //     include: { /* ... include all necessary relations ... */ }
-            // });
-            if (recipe) {
-                // We found the recipe, so we'll pass it as a prop
-                initialRecipeForModal = recipe;
-            }
-        }
-    }
+//     if (typeof recipeIdFromUrl === 'string') {
+//         const recipeId = parseInt(recipeIdFromUrl, 10);
+//         if (!isNaN(recipeId)) {
+//             // If it exists, fetch that specific recipe's data from the database
+//             const getRecipeById = api.recipe.getRecipesByIds.useQuery({ids: [recipeId]}, {enabled: false});
+//             // We use `refetch` to get the data immediately
+//             const recipe = await getRecipeById.refetch();
+//             // const recipe = await db.recipe.findUnique({
+//             //     where: { id: recipeId },
+//             //     include: { /* ... include all necessary relations ... */ }
+//             // });
+//             if (recipe) {
+//                 // We found the recipe, so we'll pass it as a prop
+//                 initialRecipeForModal = recipe;
+//             }
+//         }
+//     }
     
-    // Important: We must serialize the data to pass it from server to client
-    return {
-        props: {
-            initialRecipeForModal: JSON.parse(JSON.stringify(initialRecipeForModal)) as HomePageProps["initialRecipeForModal"],
-        },
-    };
-};
+//     // Important: We must serialize the data to pass it from server to client
+//     return {
+//         props: {
+//             initialRecipeForModal: JSON.parse(JSON.stringify(initialRecipeForModal)) as HomePageProps["initialRecipeForModal"],
+//         },
+//     };
+// };
 
-export default Home;
+//export default Home;
 
 
 
