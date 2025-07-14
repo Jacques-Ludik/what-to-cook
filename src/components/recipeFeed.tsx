@@ -5,6 +5,7 @@ import { api } from "~/utils/api";
 import Image from "next/image";
 import { useQueryClient } from '@tanstack/react-query';
 import { RecipeFeedSkeleton } from "./recipeFeedSkeleton";
+import Link from "next/link";
 
 // Define the shape of the input for our query
 interface RecipeFeedInput {
@@ -37,8 +38,9 @@ interface RecipeCardProps {
 function RecipeCard({ recipe, onClick }: RecipeCardProps) {
     return (
         // Wrap the entire card in a button for better accessibility and semantics
+        //<Link href={`/recipe/${recipe.id}`} passHref>
         <button
-            onClick={onClick}
+           onClick={onClick}
             className="border rounded-lg shadow-lg overflow-hidden text-left transition-transform duration-200 hover:scale-105 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800"
         >
             <div className="relative">
@@ -58,6 +60,7 @@ function RecipeCard({ recipe, onClick }: RecipeCardProps) {
                 </div>
             </div>
         </button>
+       // </Link>
     )
 }
 
