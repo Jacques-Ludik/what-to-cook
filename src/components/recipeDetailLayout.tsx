@@ -61,12 +61,12 @@ export function RecipeDetailLayout({ recipe, favouriteProps }: RecipeDetailLayou
             <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-5">
                 {/* Left Column: Image and Details */}
                 <div className="md:col-span-2">
-                    <Image
+                    <img
                         src={recipe.imageUrl ?? '/placeholder.png'}
                         alt={recipe.title}
                         width={400} height={300}
                         className="w-full rounded-lg object-cover shadow-md"
-                        priority // Add priority for Largest Contentful Paint (LCP) SEO boost
+                        // priority // Add priority for Largest Contentful Paint (LCP) SEO boost
                     />
                     <div className="mt-4 space-y-2 text-sm text-gray-600">
                         <p><strong>Cuisine:</strong> {recipe.area}</p>

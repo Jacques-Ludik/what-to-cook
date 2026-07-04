@@ -102,7 +102,7 @@ export function RecipeModal({ recipeId, isOpen, closeModal, isFavourited, toggle
                                         
                                         <div className="mt-4 flex flex-col md:flex-row gap-6">
                                             <div className="md:w-1/2">
-                                                <Image
+                                                <img
                                                     src={recipe.imageUrl ?? '/placeholder.png'}
                                                     alt={recipe.title}
                                                     width={400} height={300}

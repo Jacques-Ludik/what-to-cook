@@ -13,7 +13,7 @@ export function AuthShowcase() {
       {sessionData?.user && (
         <div className="hidden items-center gap-2 text-black sm:flex">
           {sessionData.user.image && (
-            <Image
+            <img
               src={sessionData.user.image}
               alt={sessionData.user.name ?? 'User avatar'}
               width={32}

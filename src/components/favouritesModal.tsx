@@ -53,7 +53,7 @@ export function FavouritesModal({ favouriteIds, isOpen, closeModal, onRecipeClic
                                                 onClick={() => handleRecipeSelect(recipe?.id ?? 0)}
                                                 className="flex items-center gap-4 p-2 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
                                             >
-                                                <Image
+                                                <img
                                                     src={recipe?.imageUrl ?? '/placeholder.png'}
                                                     alt={recipe?.title ?? ""}
                                                     width={64} height={64}

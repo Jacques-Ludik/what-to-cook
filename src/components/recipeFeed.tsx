@@ -44,7 +44,7 @@ function RecipeCard({ recipe, onClick }: RecipeCardProps) {
             className="border rounded-lg shadow-lg overflow-hidden text-left transition-transform duration-200 hover:scale-105 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800"
         >
             <div className="relative">
-                <Image
+                <img
                     src={recipe.imageUrl ?? '/placeholder.png'}
                     alt={recipe.title}
                     className="w-full h-48 object-cover"
